@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#3a9ad9">
+<title>Dragon Haven</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: bright, cheerful mobile-game housing, chunky and touch-first.
+   IDEA: a sky archipelago seen like a toy diorama you can drag around.
+   PICTURE: the islands fill the screen; panels slide over them.
+   COLOUR and TYPE: sky blue field, grass green, gold accent; Baloo 2 + Nunito.
+   LAYOUT: landscape-first: HUD top, dock bottom-right, guide bottom-left. */
+:root{--ink:#17324d;--sky1:#5cc2f2;--sky2:#c8efff;--gold:#ffb400;--green:#36b24a;--blue:#2f86de;--red:#e5484d;--panel:#fff;--soft:#eef6fb;--line:#d6e6f1;--fb:"Baloo 2",Nunito,sans-serif}
+*{box-sizing:border-box;min-width:0;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--sky1);color:var(--ink);font:15px/1.4 Nunito,system-ui,sans-serif;user-select:none;-webkit-user-select:none;overscroll-behavior:none}
+button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
+h1,h2,h3,.btn,.chip b{font-family:var(--fb)}
+#app{position:fixed;inset:0;background:linear-gradient(180deg,#4fb8ee,#bfeaff 70%,#e6f7ff)}
+#world{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#world.dragging{cursor:grabbing}
+.cloud{animation:drift linear infinite}
+@keyframes drift{from{transform:translateX(-500px)}to{transform:translateX(3400px)}}
+.bob{animation:bob 2.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-4px)}}
+.hover{animation:hov 2s ease-in-out infinite}
+@keyframes hov{50%{transform:translateY(-9px)}}
+.pulse{animation:pulse 1.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes pulse{50%{transform:scale(1.12)}}
+.float{animation:floaty 5s ease-in-out infinite}
+@keyframes floaty{50%{transform:translateY(-10px)}}
+.heart{animation:rise 2.4s ease-in infinite;opacity:0}
+@keyframes rise{0%{transform:translateY(0);opacity:0}20%{opacity:1}100%{transform:translateY(-40px);opacity:0}}
+.bld,.plot,.arenaIs{cursor:pointer}
+.bld:hover,.plot:hover .lockpatch,.arenaIs:hover{filter:brightness(1.08)}
+.ghost{opacity:.8;pointer-events:none}
+.faded{opacity:.35}
+
+/* HUD */
+#hud{position:absolute;top:calc(8px + env(safe-area-inset-top));left:calc(8px + env(safe-area-inset-left));right:calc(8px + env(safe-area-inset-right));display:flex;gap:8px;align-items:center;pointer-events:none;z-index:5}
+#hud>*{pointer-events:auto}
+.lvl{display:flex;align-items:center;gap:6px;background:rgba(18,44,70,.82);color:#fff;border-radius:22px;padding:3px 12px 3px 3px;height:40px}
+.lvl .badge{width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe27a,#f29b00);display:grid;place-items:center;font:800 16px var(--fb);color:#5a3300;box-shadow:inset 0 -3px 0 rgba(0,0,0,.18)}
+.xpbar{width:70px;height:8px;border-radius:5px;background:rgba(255,255,255,.2);overflow:hidden}
+.xpbar i{display:block;height:100%;background:linear-gradient(90deg,#9cf06b,#36b24a)}
+.chip{display:flex;align-items:center;gap:6px;background:rgba(18,44,70,.82);color:#fff;border-radius:22px;padding:3px 4px 3px 6px;height:40px}
+.chip svg{width:28px;height:28px;flex:none}
+.chip b{font-size:17px;min-width:44px;text-align:right;white-space:nowrap}
+.chip .plus{width:26px;height:26px;border-radius:50%;background:var(--green);font:800 18px/26px var(--fb);color:#fff;text-align:center}
+#hud .sp{flex:1}
+.iconbtn{width:42px;height:42px;border-radius:50%;background:rgba(18,44,70,.82);display:grid;place-items:center;color:#fff}
+.iconbtn svg{width:24px;height:24px}
+#saveDot{font-size:12px;color:#fff;background:rgba(18,44,70,.6);padding:4px 10px;border-radius:12px;white-space:nowrap}
+
+/* Docks */
+#dock{position:absolute;right:calc(10px + env(safe-area-inset-right));bottom:calc(10px + env(safe-area-inset-bottom));display:flex;gap:10px;z-index:5}
+#leftDock{position:absolute;left:calc(10px + env(safe-area-inset-left));bottom:calc(10px + env(safe-area-inset-bottom));display:flex;gap:10px;z-index:5}
+.dk{display:flex;flex-direction:column;align-items:center;gap:2px;width:64px;position:relative}
+.dk .ic{width:56px;height:56px;border-radius:18px;display:grid;place-items:center;box-shadow:0 4px 0 rgba(0,0,0,.2),inset 0 -4px 0 rgba(0,0,0,.15);border:3px solid #fff}
+.dk .ic svg{width:34px;height:34px}
+.dk span{font:800 13px var(--fb);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.dk .dot{position:absolute;top:-4px;right:2px;width:16px;height:16px;border-radius:50%;background:var(--red);border:2px solid #fff}
+.hint{animation:hint 1s ease-in-out infinite}
+.hint::after{content:"";position:absolute;top:-26px;left:50%;margin-left:-10px;border:10px solid transparent;border-top:14px solid #ffcf3f;filter:drop-shadow(0 2px 1px rgba(0,0,0,.3))}
+@keyframes hint{50%{transform:translateY(-5px)}}
+.btn.hint{position:relative}
+
+/* Banner */
+#banner{position:absolute;top:calc(56px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:#fff;border-radius:16px;padding:6px 8px 6px 16px;display:none;gap:8px;align-items:center;box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:6;font-weight:800;white-space:nowrap;max-width:96vw}
+#banner.on{display:flex}
+#banner span{overflow:hidden;text-overflow:ellipsis}
+
+/* Guide */
+#guide{position:absolute;left:calc(10px + env(safe-area-inset-left));bottom:calc(90px + env(safe-area-inset-bottom));z-index:7;display:none;align-items:flex-end;gap:6px;max-width:min(470px,70vw)}
+#guide.on{display:flex}
+#guide .owl{width:86px;height:96px;flex:none;filter:drop-shadow(0 4px 4px rgba(0,0,0,.2))}
+#guide .say{background:#fff;border-radius:18px 18px 18px 4px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,.2);font-weight:700}
+#guide .say b{font-family:var(--fb);display:block;color:#9a5b00;font-size:15px}
+#guide .say .row{margin-top:6px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:6px 16px;border-radius:14px;font-weight:800;font-size:16px;color:#fff;background:var(--green);box-shadow:inset 0 -4px 0 rgba(0,0,0,.18);white-space:nowrap}
+.btn:active{transform:translateY(2px);box-shadow:inset 0 -2px 0 rgba(0,0,0,.18)}
+.btn.blue{background:var(--blue)}.btn.gold{background:var(--gold);color:#4a2a00}.btn.red{background:var(--red)}.btn.grey{background:#9fb2c3}.btn.gem{background:#13b6c9}
+.btn[disabled]{background:#c4d0da;color:#fff;cursor:not-allowed;box-shadow:none}
+.btn.sm{min-height:36px;font-size:14px;padding:4px 12px;border-radius:12px}
+.btn svg{width:20px;height:20px}
+:focus-visible{outline:3px solid #ffcf3f;outline-offset:2px}
+
+/* Modal */
+#modalBg{position:fixed;inset:0;background:rgba(10,30,50,.5);display:none;align-items:center;justify-content:center;z-index:20;padding:10px}
+#modalBg.on{display:flex}
+.modal{background:var(--panel);border-radius:22px;width:min(900px,96vw);max-height:92vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.35);overflow:hidden;animation:pop .18s ease-out}
+@keyframes pop{from{transform:scale(.94);opacity:0}}
+.mhead{display:flex;align-items:center;gap:10px;padding:10px 12px 10px 18px;background:var(--blue);color:#fff}
+.mhead h2{margin:0;font-size:22px;flex:1;line-height:1.1}
+.mhead .x{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.22);font:800 22px var(--fb);color:#fff}
+.mbody{padding:14px 16px 16px;overflow:auto;flex:1}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.tab{padding:6px 14px;border-radius:12px;background:var(--soft);font-weight:800;min-height:38px}
+.tab.on{background:var(--ink);color:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.card{background:var(--soft);border-radius:16px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;position:relative;border:2px solid transparent}
+.card.click{cursor:pointer}.card.click:hover{border-color:var(--blue)}
+.card.sel{border-color:var(--green);background:#e6f8e6}
+.card.lock{opacity:.6}
+.card .art{width:100%;aspect-ratio:12/10;display:grid;place-items:center}
+.card .art svg{width:100%;height:100%}
+.card h3{margin:0;font-size:16px;line-height:1.1}
+.card small{color:#4f6a82;font-weight:700}
+.price{display:inline-flex;align-items:center;gap:4px;font:800 15px var(--fb);white-space:nowrap}
+.price svg{width:18px;height:18px}
+.rar{font:800 11px Nunito,sans-serif;color:#fff;padding:1px 8px;border-radius:8px}
+.els{display:flex;gap:3px;justify-content:center;flex-wrap:wrap}
+.el{display:inline-flex;align-items:center;gap:3px;font:800 12px Nunito,sans-serif;padding:1px 7px 1px 2px;border-radius:10px;color:#fff;white-space:nowrap}
+.el svg{width:16px;height:16px}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.split{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:16px}
+.bigart{background:radial-gradient(circle at 50% 60%,#fff,#dff1fb);border-radius:18px;aspect-ratio:12/10;display:grid;place-items:center}
+.bigart svg{width:92%;height:92%}
+.stat{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line);font-weight:700}
+.stat b{font-family:var(--fb)}
+.bar{height:14px;border-radius:8px;background:#dbe7ef;overflow:hidden;position:relative}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#7fd957,#36b24a);transition:width .3s}
+.bar.gold i{background:linear-gradient(90deg,#ffd75e,#ffae00)}
+.pips{display:flex;gap:4px}.pips i{width:14px;height:14px;border-radius:50%;background:#d3dfe8}.pips i.on{background:var(--gold)}
+.list{display:flex;flex-direction:column;gap:10px}
+.item{display:flex;gap:12px;align-items:center;background:var(--soft);border-radius:16px;padding:8px 10px;flex-wrap:wrap}
+.item .art{width:86px;height:72px;flex:none}
+.item .art svg{width:100%;height:100%}
+.item .grow{flex:1;min-width:140px}
+.item h3{margin:0;font-size:17px}
+.muted{color:#5b7590;font-weight:700;font-size:13px}
+.note{background:#fff6dc;border-radius:12px;padding:8px 12px;font-weight:700;color:#7a5200}
+.empty{text-align:center;padding:24px;color:#5b7590;font-weight:800}
+.timer{font:800 15px var(--fb);white-space:nowrap}
+
+/* Battle */
+.modal.battle{width:min(1100px,98vw);height:min(640px,96vh);max-height:none}
+.arena{position:relative;flex:1;background:linear-gradient(180deg,#86d3ff,#d9f3ff 55%,#9ad26a 55%,#6fb446);overflow:hidden}
+.fighter{position:absolute;bottom:14%;width:34%;max-width:330px;aspect-ratio:12/10;transition:transform .2s}
+.fighter svg{width:100%;height:100%}
+.fighter.me{left:6%}.fighter.foe{right:6%}
+.fighter.lunge.me{transform:translateX(18%)}.fighter.lunge.foe{transform:translateX(-18%)}
+.fighter.hit{animation:shake .35s}
+.fighter.ko{opacity:0;transform:translateY(30px);transition:all .5s}
+@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.hpbox{position:absolute;top:10px;width:min(330px,42%);background:rgba(255,255,255,.92);border-radius:14px;padding:6px 10px}
+.hpbox.me{left:10px}.hpbox.foe{right:10px}
+.hpbox h3{margin:0;font-size:16px;display:flex;justify-content:space-between;gap:6px}
+.hpbox .bar{height:12px;margin-top:4px}
+.hpbox .bar i.low{background:linear-gradient(90deg,#ff8a5b,#e5484d)}
+.team{display:flex;gap:4px;margin-top:4px}.team i{width:12px;height:12px;border-radius:50%;background:var(--green)}.team i.dead{background:#c4ced6}
+.dmg{position:absolute;font:800 30px var(--fb);color:#fff;-webkit-text-stroke:2px #8a1f1f;animation:dmg 1s ease-out forwards;pointer-events:none}
+.dmg.eff{color:#ffe14a}
+@keyframes dmg{to{transform:translateY(-60px);opacity:0}}
+.shot{position:absolute;width:34px;height:34px;border-radius:50%;bottom:34%;transition:left .38s ease-in;box-shadow:0 0 20px currentColor}
+.moves{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:10px;background:#123049}
+.mv{border-radius:14px;padding:6px 8px;color:#fff;text-align:left;min-height:54px;box-shadow:inset 0 -4px 0 rgba(0,0,0,.2);display:flex;flex-direction:column;justify-content:center}
+.mv b{font:800 15px/1.1 var(--fb)}
+.mv small{font-weight:800;font-size:12px;opacity:.95}
+.mv[disabled]{filter:grayscale(.8);opacity:.5;cursor:not-allowed}
+.blog{position:absolute;left:50%;top:22%;transform:translateX(-50%);background:rgba(18,48,73,.85);color:#fff;border-radius:12px;padding:6px 14px;font-weight:800;text-align:center;max-width:80%}
+
+/* Toasts / login / rotate */
+#toasts{position:fixed;top:60px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:40;pointer-events:none;align-items:center}
+.toast{background:#fff;border-radius:14px;padding:8px 16px;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,.2);animation:pop .2s;display:flex;gap:8px;align-items:center;max-width:90vw}
+.toast svg{width:20px;height:20px;flex:none}
+#login{position:fixed;inset:0;z-index:50;display:flex;align-items:safe center;justify-content:center;background:linear-gradient(180deg,#3fa9e6,#bfeaff);padding:12px;overflow:auto}
+.lbox{background:#fff;border-radius:24px;padding:18px 22px;width:min(720px,96vw);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:center;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.lbox h1{margin:0;font-size:40px;line-height:1}
+.lbox p{margin:6px 0 0}
+.lbox label{display:block;font-weight:800;font-size:13px;margin-top:8px}
+.lbox input{width:100%;font:700 16px Nunito,sans-serif;padding:10px 12px;border-radius:12px;border:2px solid var(--line);margin-top:3px;user-select:text}
+.lbox input:focus{border-color:var(--blue);outline:none}
+.err{color:var(--red);font-weight:800;min-height:20px;font-size:13px;margin-top:6px}
+#rotate{position:fixed;inset:0;z-index:60;background:#17324d;color:#fff;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px}
+@media (orientation:portrait) and (max-width:700px){#rotate.need{display:flex}}
+@media (max-height:480px){
+  .mhead{padding:6px 10px 6px 14px}.mhead h2{font-size:19px}.mbody{padding:10px 12px}
+  .modal{max-height:96vh}.dk .ic{width:46px;height:46px;border-radius:14px}.dk .ic svg{width:28px;height:28px}.dk{width:52px}
+  .chip,.lvl{height:36px}.chip svg{width:24px;height:24px}.chip b{font-size:15px;min-width:36px}.iconbtn{width:38px;height:38px}
+  .moves{padding:6px;gap:6px}.mv{min-height:44px}
+  .lbox{padding:12px 16px;grid-template-columns:minmax(0,.7fr) minmax(0,1fr)}.lbox h1{font-size:30px}.lbox label{margin-top:4px}.lbox input{padding:7px 10px}
+  #guide{bottom:calc(74px + env(safe-area-inset-bottom))}#guide .owl{width:64px;height:72px}#guide .say{padding:7px 11px;font-size:14px}
+}
+@media (max-width:640px){.split{grid-template-columns:1fr}.lbox{grid-template-columns:1fr}.lbox .logo{display:none}.xpbar{width:44px}#saveDot{display:none}.chip b{min-width:30px}}
+@media (prefers-reduced-motion:reduce){.cloud,.bob,.hover,.pulse,.float,.heart,.hint{animation:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <svg id="world" aria-label="Your islands. Drag to look around."><g id="cam"></g></svg>
+  <div id="hud"></div>
+  <div id="banner"><span id="bannerText"></span><button class="btn sm" id="bannerOk">Place</button><button class="btn sm red" id="bannerCancel">Cancel</button></div>
+  <div id="guide"></div>
+  <div id="leftDock"></div>
+  <div id="dock"></div>
+</div>
+<div id="modalBg"><div class="modal" id="modal"></div></div>
+<div id="toasts"></div>
+<div id="login"></div>
+<div id="rotate"><svg width="90" height="90" viewBox="0 0 90 90"><rect x="28" y="10" width="34" height="60" rx="6" fill="none" stroke="#fff" stroke-width="5"/><path d="M14 64a32 32 0 0 0 30 18" fill="none" stroke="#ffb400" stroke-width="5" stroke-linecap="round"/><path d="M40 76l6 6-7 5" fill="none" stroke="#ffb400" stroke-width="5" stroke-linecap="round"/></svg><h2 style="margin:0;font-family:var(--fb)">Turn your phone sideways</h2><p style="margin:0">Dragon Haven plays best in landscape.</p><button class="btn" id="rotateOk">Play anyway</button></div>
+
+<script>
+{
+/* ================= helpers ================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const now = () => Date.now();
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function shade(hex,a){const n=parseInt(hex.slice(1),16),f=v=>Math.max(0,Math.min(255,Math.round(a<0?v*(1+a):v+(255-v)*a)));return'#'+((1<<24)|(f(n>>16)<<16)|(f(n>>8&255)<<8)|f(n&255)).toString(16).slice(1)}
+const fmt = n => n>=1e6?(n/1e6).toFixed(1).replace(/\.0$/,'')+'M':n>=1e4?(n/1e3).toFixed(1).replace(/\.0$/,'')+'K':String(Math.floor(n));
+function fmtT(ms){ms=Math.max(0,ms);const s=Math.ceil(ms/1000);if(s<60)return s+'s';const m=Math.floor(s/60);if(m<60)return m+'m '+(s%60)+'s';const h=Math.floor(m/60);return h+'h '+(m%60)+'m'}
+const pick = (r,a) => a[Math.floor(r()*a.length)];
+const inner = svg => svg.replace(/^<svg[^>]*>|<\/svg>$/g,'');
+
+/* ================= elements ================= */
+const EL={
+ ember:{n:'Ember',c:'#ff5a36',c2:'#ffc23d',pre:'Cinder',suf:'flare'},
+ tide:{n:'Tide',c:'#2b8cff',c2:'#8fe0ff',pre:'Brine',suf:'wave'},
+ grove:{n:'Grove',c:'#3fae4a',c2:'#c3ec6e',pre:'Thorn',suf:'bloom'},
+ stone:{n:'Stone',c:'#9a7550',c2:'#e3cda6',pre:'Crag',suf:'shard'},
+ storm:{n:'Storm',c:'#f2b705',c2:'#4a5d8a',pre:'Thunder',suf:'bolt'},
+ frost:{n:'Frost',c:'#6fcdf0',c2:'#effcff',pre:'Rime',suf:'chill'},
+ shade:{n:'Shade',c:'#4b3f72',c2:'#a596e0',pre:'Gloom',suf:'shadow'},
+ radiant:{n:'Radiant',c:'#ffcf33',c2:'#fff6c9',pre:'Sun',suf:'beam'},
+ metal:{n:'Metal',c:'#8796a6',c2:'#dde5ec',pre:'Iron',suf:'plate'},
+ wind:{n:'Wind',c:'#4fc7a3',c2:'#d8fff1',pre:'Gale',suf:'gust'},
+ aether:{n:'Aether',c:'#ff6fae',c2:'#8ff0ff',pre:'Astra',suf:'nova'},
+ neutral:{n:'Neutral',c:'#7d8b99',c2:'#dfe6ec'}
+};
+const BASE=['ember','tide','grove','stone','storm','frost','shade','radiant','metal','wind'];
+// Original type chart: each element hits two others for double damage and does nothing to itself.
+const STRONG={ember:['grove','frost'],tide:['ember','stone'],grove:['tide','stone'],stone:['storm','ember'],storm:['tide','wind'],frost:['grove','wind'],shade:['radiant','metal'],radiant:['shade','frost'],metal:['radiant','storm'],wind:['metal','shade'],aether:[],neutral:[]};
+function mult(a,d){if(a==='neutral')return 1;if(a===d)return 0;if(a==='aether')return 1.5;if(d==='aether')return 1;if(STRONG[a].includes(d))return 2;if(STRONG[d].includes(a))return .5;return 1}
+const weakTo = e => BASE.filter(x=>STRONG[x].includes(e));
+function elIcon(e,size){const c=EL[e].c,s=size||16;const paths={
+ ember:`<path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-6 1 1 1 2 2 2 0-2 0-4 1-6z" fill="#fff"/>`,
+ tide:`<path d="M12 4c3 5 6 8 6 11a6 6 0 0 1-12 0c0-3 3-6 6-11z" fill="#fff"/>`,
+ grove:`<path d="M6 18C6 9 12 5 19 5c0 8-4 13-11 13l-2 2" fill="#fff"/>`,
+ stone:`<path d="M5 15l3-8h8l3 8-7 4z" fill="#fff"/>`,
+ storm:`<path d="M13 3L6 13h5l-2 8 8-11h-5z" fill="#fff"/>`,
+ frost:`<path d="M12 3v18M4 7.5l16 9M4 16.5l16-9" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>`,
+ shade:`<path d="M15 4a8 8 0 1 0 5 13A7 7 0 0 1 15 4z" fill="#fff"/>`,
+ radiant:`<circle cx="12" cy="12" r="4" fill="#fff"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2 2M16.4 16.4l2 2M5.6 18.4l2-2M16.4 7.6l2-2" stroke="#fff" stroke-width="2" stroke-linecap="round"/>`,
+ metal:`<circle cx="12" cy="12" r="6" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="3 2.2"/><circle cx="12" cy="12" r="2.4" fill="#fff"/>`,
+ wind:`<path d="M4 9h10a3 3 0 1 0-3-3M4 14h13a3 3 0 1 1-3 3M4 19h6" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>`,
+ aether:`<path d="M12 3l2.6 6 6.4.6-4.9 4.3 1.5 6.3L12 17l-5.6 3.2 1.5-6.3L3 9.6 9.4 9z" fill="#fff"/>`,
+ neutral:`<path d="M6 18L18 6M9 6h9v9" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round"/>`};
+ return `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><circle cx="12" cy="12" r="12" fill="${c}"/>${paths[e]}</svg>`}
+const elChip = e => `<span class="el" style="background:${shade(EL[e].c,-.15)}">${elIcon(e)}${EL[e].n}</span>`;
+
+/* ================= rarities & dragons ================= */
+const RAR={C:{n:'Common',m:1,g:5,col:'#7e93a8',w:40,bt:.5,ht:.5,xp:20,sell:100},R:{n:'Rare',m:1.2,g:8,col:'#2f86de',w:28,bt:3,ht:2,xp:60,sell:400},E:{n:'Epic',m:1.45,g:12,col:'#9b44e0',w:9,bt:12,ht:8,xp:200,sell:1500},L:{n:'Legendary',m:1.8,g:20,col:'#ff9d00',w:3,bt:30,ht:20,xp:600,sell:5000}};
+const rarBadge = r => `<span class="rar" style="background:${RAR[r].col}">${RAR[r].n}</span>`;
+/* Batch 1 = 100 dragons. Future batches append 100 each (ids 100-199, 200-299, 300-399)
+   by adding a builder to BATCHES and bumping RELEASED. Saves only store ids, so old saves keep working. */
+const RELEASED=100;
+const DRAGONS=[];
+const PURE_NAMES=['Emberkin','Tidelet','Mosswing','Pebblehorn','Voltail','Frostnip','Duskclaw','Glimmerling','Rivetscale','Zephyrling'];
+const SA=['Va','Kor','Zy','Ae','Thal','Mor','Quin','Syl','Dra','Ner','Ul','Bry','Ix','Ora','Fen','Cal','Vex','Lun','Tor','Esh'];
+const SB=['rax','vyn','thos','ion','mire','dris','lith','zar','wyrm','ceth','vane','gorn','sera','quill','dun','rhal'];
+const BATCHES=[function batch1(){
+  BASE.forEach((e,i)=>DRAGONS.push({id:i,name:PURE_NAMES[i],els:[e],r:'C'}));
+  for(let i=0;i<10;i++)for(let j=i+1;j<10;j++){const[a,b]=(i+j)%2?[BASE[j],BASE[i]]:[BASE[i],BASE[j]];DRAGONS.push({id:DRAGONS.length,name:EL[a].pre+EL[b].suf,els:[a,b],r:'R'})}
+  const used=new Set(DRAGONS.map(d=>d.name)),r=rng(4242),trip=new Set();
+  const uname=()=>{for(;;){const n=pick(r,SA)+pick(r,SB);if(!used.has(n)){used.add(n);return n}}};
+  while(DRAGONS.length<90){const p=[...BASE].map(e=>[r(),e]).sort((x,y)=>x[0]-y[0]).slice(0,3).map(x=>x[1]);const k=[...p].sort().join();if(trip.has(k))continue;trip.add(k);DRAGONS.push({id:DRAGONS.length,name:uname(),els:p,r:'E'})}
+  BASE.forEach(e=>DRAGONS.push({id:DRAGONS.length,name:uname(),els:['aether',e],r:'L'}));
+}];
+BATCHES.forEach(b=>b());
+const DR = id => DRAGONS[id];
+
+const ATK={ember:['Spark Spit','Inferno Roar'],tide:['Bubble Jet','Tidal Crash'],grove:['Thorn Lash','Overgrowth'],stone:['Pebble Toss','Rockslide'],storm:['Static Zap','Thunderclap'],frost:['Ice Shard','Blizzard'],shade:['Shadow Nip','Eclipse'],radiant:['Glint','Solar Flare'],metal:['Iron Tail','Steel Storm'],wind:['Gust','Cyclone'],aether:['Star Pulse','Cosmic Rift']};
+function movesOf(d){const p=d.els[0],m=[{n:'Strike',el:'neutral',p:20,u:1},{n:ATK[p][0],el:p,p:30,u:1}];
+  if(d.els[1])m.push({n:ATK[d.els[1]][0],el:d.els[1],p:32,u:3});
+  m.push({n:ATK[p][1],el:p,p:50,u:d.els[1]?6:5});
+  if(m.length<4)m.push({n:'Wing Slam',el:'neutral',p:38,u:8});
+  return m.slice(0,4)}
+const MAXLV=20;
+const hpOf=(d,l)=>Math.round(100*RAR[d.r].m*(1+.15*(l-1)));
+const atkOf=(d,l)=>Math.round(10*RAR[d.r].m*(1+.12*(l-1)));
+const rateOf=(d,l)=>RAR[d.r].g*(1+.25*(l-1));
+const feedCost=(d,l)=>Math.round(5*l*RAR[d.r].m);
+const stageOf=l=>l<4?0:l<7?1:2;
+const STAGES=['Baby','Young','Adult'];
+
+/* ================= SVG art: dragons ================= */
+/* Element features, drawn pointing "up" from a base point. */
+const FEAT={
+ ember:`<path d="M0 1C-7-3-6-12 0-19C1-12 7-10 5-4C8-6 8-1 6 1Z" fill="#ff6a1f"/><path d="M0-1C-3-3-2-8 0-11C1-7 3-5 2-2Z" fill="#ffd23f"/>`,
+ tide:`<path d="M-7 1Q-5-15 6-15Q1-8 7 1Z" fill="#5ab0ff" stroke="#1f6fd1" stroke-width="1.4"/>`,
+ grove:`<path d="M0 1C-7-5-5-15 0-19C5-15 7-5 0 1Z" fill="#53c45a" stroke="#2c8a35" stroke-width="1.2"/><path d="M0-1V-15" stroke="#2c8a35" stroke-width="1.2"/>`,
+ stone:`<path d="M-7 1L-6-9L1-14L7-6L6 1Z" fill="#a2907c" stroke="#6e5f50" stroke-width="1.4"/>`,
+ storm:`<path d="M1-19L-6-7L0-7L-3 2L7-10L1-10Z" fill="#ffd400" stroke="#b38f00" stroke-width="1.2" stroke-linejoin="round"/>`,
+ frost:`<path d="M0-21L4-6L0 1L-4-6Z" fill="#e2f8ff" stroke="#6fcdf0" stroke-width="1.4"/><path d="M5-1L9-11L7 1Z" fill="#c8f0ff" stroke="#6fcdf0" stroke-width="1"/>`,
+ shade:`<path d="M0 1C-7-6 4-10-2-19C7-13 7-4 0 1Z" fill="#3b2f66" opacity=".85"/><circle cx="1" cy="-8" r="1.8" fill="#d6c8ff"/>`,
+ radiant:`<circle cx="0" cy="-10" r="9" fill="#fff6b0" opacity=".55"/><path d="M-3 1L0-19L3 1Z" fill="#ffe680" stroke="#f0a800" stroke-width="1.2"/>`,
+ metal:`<rect x="-7" y="-11" width="14" height="12" rx="3" fill="#c0cad3" stroke="#66737f" stroke-width="1.4"/><circle cx="-3" cy="-5" r="1.3" fill="#66737f"/><circle cx="3" cy="-5" r="1.3" fill="#66737f"/>`,
+ wind:`<path d="M0 1C-3-7 2-14 7-19C5-10 5-4 0 1Z" fill="#c9f8e7" stroke="#3fb593" stroke-width="1.3"/><path d="M-4 1C-6-4-4-9-1-12" stroke="#3fb593" stroke-width="1.3" fill="none"/>`,
+ aether:`<path d="M0-18L2.6-11L10-10L4.4-5.4L6-1L0-4L-6-1L-4.4-5.4L-10-10L-2.6-11Z" fill="#fff6a8" stroke="#ff6fae" stroke-width="1.3"/>`
+};
+const TAIL={
+ ember:FEAT.ember,
+ tide:`<path d="M0 2L-11-14Q0-8 0-4Q0-8 11-14Z" fill="#5ab0ff" stroke="#1f6fd1" stroke-width="1.4" stroke-linejoin="round"/>`,
+ grove:`<path d="M0 1C-9-5-7-17 0-21C7-17 9-5 0 1Z" fill="#53c45a" stroke="#2c8a35" stroke-width="1.3"/><circle cx="0" cy="-10" r="3.5" fill="#ff8fb8"/><circle cx="0" cy="-10" r="1.4" fill="#ffd84d"/>`,
+ stone:`<path d="M-8 0L-9-10L-2-16L7-12L9-2L2 3Z" fill="#a2907c" stroke="#6e5f50" stroke-width="1.6"/><path d="M-4-9l4-2 3 3" stroke="#6e5f50" stroke-width="1.2" fill="none"/>`,
+ storm:`<path d="M2-22L-7-8L0-8L-4 4L9-12L2-12Z" fill="#ffd400" stroke="#b38f00" stroke-width="1.4" stroke-linejoin="round"/>`,
+ frost:`<path d="M0-22L5-7L0 1L-5-7Z" fill="#e2f8ff" stroke="#6fcdf0" stroke-width="1.5"/><path d="M-6-4L-12-12L-4-8Z M6-4L12-12L4-8Z" fill="#c8f0ff" stroke="#6fcdf0" stroke-width="1"/>`,
+ shade:`<circle cx="0" cy="-7" r="7" fill="#3b2f66" opacity=".8"/><circle cx="-5" cy="-12" r="4" fill="#3b2f66" opacity=".6"/><circle cx="5" cy="-14" r="3" fill="#3b2f66" opacity=".5"/>`,
+ radiant:`<circle cx="0" cy="-7" r="10" fill="#fff6b0" opacity=".6"/><circle cx="0" cy="-7" r="5.5" fill="#ffd84d" stroke="#f0a800" stroke-width="1.4"/>`,
+ metal:`<path d="M-4 2L-6-10L0-22L6-10L4 2Z" fill="#d6dee5" stroke="#66737f" stroke-width="1.5"/><path d="M0-19V0" stroke="#9aa6b2" stroke-width="1"/>`,
+ wind:`<path d="M0 0C-10-6 8-12-2-20" stroke="#3fb593" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M0 0C-10-6 8-12-2-20" stroke="#c9f8e7" stroke-width="1.6" fill="none" stroke-linecap="round"/>`,
+ aether:FEAT.aether
+};
+const CREST={
+ ember:FEAT.ember,tide:FEAT.tide,grove:`<path d="M0 0v-6" stroke="#2c8a35" stroke-width="1.5"/><circle cx="0" cy="-9" r="5" fill="#ff8fb8"/><circle cx="0" cy="-9" r="2" fill="#ffd84d"/>`,
+ stone:`<path d="M-8 0L-6-6L-2-3L0-9L3-3L6-7L8 0Z" fill="#a2907c" stroke="#6e5f50" stroke-width="1.2"/>`,
+ storm:`<ellipse cx="0" cy="-8" rx="9" ry="5" fill="#8d99b8"/><ellipse cx="-4" cy="-11" rx="5" ry="4" fill="#a9b3cc"/><path d="M1-5l-3 5h3l-2 4" stroke="#ffd400" stroke-width="1.6" fill="none"/>`,
+ frost:`<path d="M0-14V0M-6-10L6-3M-6-3L6-10" stroke="#e2f8ff" stroke-width="2.2" stroke-linecap="round"/><path d="M0-14V0M-6-10L6-3M-6-3L6-10" stroke="#6fcdf0" stroke-width=".8"/>`,
+ shade:`<ellipse cx="0" cy="3" rx="3" ry="2.2" fill="#d6c8ff"/><circle cx="0" cy="3" r="1.2" fill="#3b2f66"/>`,
+ radiant:`<ellipse cx="0" cy="-8" rx="11" ry="3.4" fill="none" stroke="#ffd34d" stroke-width="2.4"/>`,
+ metal:`<path d="M-11 4Q0-8 11 4" stroke="#9aa6b2" stroke-width="4" fill="none"/><circle cx="0" cy="-2" r="1.6" fill="#66737f"/>`,
+ wind:`<path d="M-2 0C-4-7 0-12 5-15C3-8 4-3 2 0Z M3 1C3-5 7-8 11-9C8-4 8-1 6 2Z" fill="#c9f8e7" stroke="#3fb593" stroke-width="1"/>`,
+ aether:FEAT.aether
+};
+const SIL='#2b3a48';
+const silify = s => s.replace(/(fill|stroke)="#[0-9a-fA-F]{3,6}"/g,(m,a)=>`${a}="${SIL}"`);
+const at=(x,y,a,s,body)=>`<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${a}) scale(${s})">${body}</g>`;
+const ARCH_PERM=[];const archOf=id=>{const b=Math.floor(id/8);if(!ARCH_PERM[b]){const r=rng(b*131+7);ARCH_PERM[b]=[0,1,2,3,4,5,6,7].map(k=>[r(),k]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);if(b>0&&ARCH_PERM[b][0]===archOf(b*8-1)){const p=ARCH_PERM[b];[p[0],p[1]]=[p[1],p[0]]}}return ARCH_PERM[b][id%8]};
+const ARCH_N=['Classic','Serpent','Chunky','Wyvern','Longneck','Avian','Glider','Sitter'];
+function archetype(k,P,B,D,bw,bh){
+  const L=shade(P,-.16);
+  switch(k){
+  case 0:return{under:`<path d="M42 80C22 86 10 72 16 54" fill="none" stroke="${P}" stroke-width="11" stroke-linecap="round"/><ellipse cx="45" cy="92" rx="8" ry="9" fill="${D}"/>`,
+    body:`<ellipse cx="58" cy="74" rx="${26*bw}" ry="${20*bh}" fill="${P}"/><ellipse cx="64" cy="80" rx="${15*bw}" ry="${12*bh}" fill="${B}"/><path d="M70 66C76 58 80 52 84 44" fill="none" stroke="${P}" stroke-width="15" stroke-linecap="round"/>`,
+    over:`<ellipse cx="72" cy="94" rx="8" ry="8" fill="${L}"/>`,head:[88,40,1],wing:[58,56,1],back:[[38,62,-35],[48,56,-12],[58,55,4]],tail:[16,54,-25],c:[52,72],sh:[60,36,.16]};
+  case 1:return{under:``,
+    body:`<path d="M14 96C40 106 70 102 64 84C58 68 34 74 40 58C46 46 66 50 80 42" fill="none" stroke="${P}" stroke-width="16" stroke-linecap="round"/><path d="M18 98C40 106 68 101 63 85C58 70 37 74 42 60C47 50 64 52 78 45" fill="none" stroke="${B}" stroke-width="5" stroke-linecap="round" opacity=".9"/>`,
+    over:`<path d="M64 88l7 6M60 92l5 6" stroke="${D}" stroke-width="4" stroke-linecap="round"/>`,head:[88,39,1],wing:[50,56,.5],back:[[38,64,-60],[46,52,-25],[60,48,5]],tail:[12,96,-100],c:[50,80],sh:[44,36,.16]};
+  case 2:return{under:`<path d="M28 84C18 86 10 80 10 72" fill="none" stroke="${P}" stroke-width="9" stroke-linecap="round"/><ellipse cx="40" cy="99" rx="10" ry="6" fill="${D}"/>`,
+    body:`<ellipse cx="56" cy="74" rx="32" ry="27" fill="${P}"/><ellipse cx="63" cy="82" rx="20" ry="16" fill="${B}"/>`,
+    over:`<ellipse cx="73" cy="100" rx="10" ry="6" fill="${L}"/>`,head:[86,50,1.06],wing:[50,52,.62],back:[[32,60,-45],[46,49,-15],[62,48,12]],tail:[10,72,-15],c:[50,70],sh:[58,40,.16]};
+  case 3:return{under:`<path d="M48 84C34 92 22 98 8 96" fill="none" stroke="${P}" stroke-width="9" stroke-linecap="round"/><ellipse cx="50" cy="86" rx="9" ry="11" fill="${D}"/><ellipse cx="47" cy="99" rx="8" ry="3.5" fill="${D}"/>`,
+    body:`<ellipse cx="58" cy="66" rx="17" ry="27" fill="${P}" transform="rotate(18 58 66)"/><ellipse cx="63" cy="70" rx="9" ry="18" fill="${B}" transform="rotate(18 63 70)"/><path d="M64 46C68 38 72 33 78 28" fill="none" stroke="${P}" stroke-width="12" stroke-linecap="round"/>`,
+    over:`<ellipse cx="66" cy="88" rx="9" ry="11" fill="${L}"/><ellipse cx="70" cy="99" rx="8" ry="3.5" fill="${L}"/>`,head:[82,28,.95],wing:[58,50,1.08],back:[[47,50,-55],[50,40,-35],[56,58,-60]],tail:[8,96,-95],c:[58,68],sh:[58,30,.16]};
+  case 4:return{under:`<path d="M24 82C14 86 8 92 4 96" fill="none" stroke="${P}" stroke-width="8" stroke-linecap="round"/><rect x="26" y="86" width="9" height="15" rx="4" fill="${D}"/><rect x="50" y="86" width="9" height="15" rx="4" fill="${D}"/>`,
+    body:`<ellipse cx="44" cy="80" rx="26" ry="16" fill="${P}"/><ellipse cx="46" cy="86" rx="16" ry="8" fill="${B}"/><path d="M62 74C80 64 74 38 92 26" fill="none" stroke="${P}" stroke-width="11" stroke-linecap="round"/>`,
+    over:`<rect x="35" y="88" width="9" height="14" rx="4" fill="${L}"/><rect x="59" y="86" width="9" height="15" rx="4" fill="${L}"/>`,head:[96,26,.82],wing:[44,68,.62],back:[[28,68,-40],[40,64,-10],[52,65,10]],tail:[4,96,-115],c:[40,78],sh:[46,40,.16]};
+  case 5:return{under:[-62,-42,-22].map((a,i)=>`<path d="M36 74C26 60 16 58 6 60C14 66 22 74 36 78Z" fill="${i===1?P:shade(P,-.12)}" transform="rotate(${a+40} 36 76)"/>`).join('')+`<path d="M55 89L53 101M53 101l-5 1M53 101l4 1M65 89L64 101M64 101l-5 1M64 101l4 1" stroke="#d9a441" stroke-width="3" stroke-linecap="round"/>`,
+    body:`<ellipse cx="60" cy="70" rx="24" ry="21" fill="${P}" transform="rotate(-12 60 70)"/><ellipse cx="66" cy="76" rx="13" ry="13" fill="${B}"/><path d="M74 58C78 52 80 48 82 44" fill="none" stroke="${P}" stroke-width="13" stroke-linecap="round"/>`,
+    over:``,head:[84,40,1],wing:[58,58,1.05],back:[[44,54,-35],[54,49,-8]],tail:[24,58,-70],c:[56,70],sh:[60,28,.16],avian:1};
+  case 6:return{under:`<path d="M36 60C20 56 14 44 6 46" fill="none" stroke="${P}" stroke-width="9" stroke-linecap="round"/><ellipse cx="48" cy="71" rx="6" ry="5" fill="${D}"/>`,
+    body:`<ellipse cx="58" cy="58" rx="27" ry="15" fill="${P}"/><ellipse cx="62" cy="64" rx="16" ry="7" fill="${B}"/><path d="M78 52C82 48 84 44 86 40" fill="none" stroke="${P}" stroke-width="12" stroke-linecap="round"/>`,
+    over:`<ellipse cx="68" cy="73" rx="6" ry="5" fill="${L}"/>`,head:[89,38,1],wing:[56,50,1.12],back:[[44,46,-15],[56,43,0],[68,45,15]],tail:[6,46,-70],c:[54,58],sh:[58,22,.08],fly:1};
+  default:return{under:``,
+    body:`<circle cx="46" cy="84" r="19" fill="${P}"/><ellipse cx="64" cy="70" rx="15" ry="22" fill="${P}"/><ellipse cx="67" cy="75" rx="8" ry="15" fill="${B}"/><path d="M66 52C70 44 72 40 76 34" fill="none" stroke="${P}" stroke-width="13" stroke-linecap="round"/>`,
+    over:`<rect x="61" y="82" width="7" height="19" rx="3.5" fill="${L}"/><rect x="70" y="82" width="7" height="19" rx="3.5" fill="${L}"/><path d="M34 98C50 108 82 108 92 98" fill="none" stroke="${P}" stroke-width="9" stroke-linecap="round"/>`,head:[79,32,.95],wing:[50,62,.7],back:[[42,68,-45],[50,55,-25],[57,48,-8]],tail:[92,98,70],c:[48,82],sh:[60,34,.16]};
+  }}
+const WINGS=[
+ (c,d)=>`<path d="M0 0L-30-42L-21-22L-14-36L-8-16L2-32L8-8Z" fill="${c}" stroke="${d}" stroke-width="2" stroke-linejoin="round"/><path d="M0 0L-21-22M0 0L-8-16" stroke="${d}" stroke-width="1.5"/>`,
+ (c,d)=>`<path d="M0 2C-20-26-12-46 12-42C6-34 18-30 12-22C18-18 12-10 6-6Z" fill="${c}" stroke="${d}" stroke-width="2"/><path d="M2-2C-2-16 0-28 8-36" stroke="${d}" stroke-width="1.5" fill="none"/>`,
+ (c,d)=>`<path d="M-2 2L-22-34L-6-22L-4-40L6-20L14-30L10-4Z" fill="${c}" stroke="${d}" stroke-width="2" stroke-linejoin="round"/>`,
+ (c,d)=>`<ellipse cx="-6" cy="-22" rx="12" ry="24" transform="rotate(-28 -6 -22)" fill="${c}" stroke="${d}" stroke-width="2"/><ellipse cx="8" cy="-24" rx="9" ry="20" transform="rotate(14 8 -24)" fill="${shade(c,.2)}" stroke="${d}" stroke-width="2"/>`,
+ (c,d)=>[0,1,2,3,4].map(i=>`<path d="M0 0C${-6-i*6} ${-10-i*2} ${-10-i*7} ${-24-i*3} ${-6-i*6} ${-36+i*3}C${-2-i*4} ${-26} ${2-i*2} ${-14} 4 -2Z" fill="${i%2?shade(c,.15):c}" stroke="${d}" stroke-width="1.4"/>`).reverse().join('')
+];
+const HORNS=[
+ c=>`<path d="M-7-10C-10-20-6-26 0-28C-4-22-2-16-1-12Z" fill="${c}"/><path d="M2-12C2-22 8-27 14-27C8-22 8-16 7-11Z" fill="${c}"/>`,
+ c=>`<path d="M0-12L6-34L8-11Z" fill="${c}"/><path d="M3-16l4 1M2-22l4 1" stroke="${shade(c,-.3)}" stroke-width="1"/>`,
+ c=>`<path d="M-6-11L-10-24M-8-18L-14-20M5-13L10-26M8-20L14-22" stroke="${c}" stroke-width="3.4" stroke-linecap="round"/>`,
+ c=>`<circle cx="-4" cy="-13" r="4" fill="${c}"/><circle cx="6" cy="-14" r="4" fill="${c}"/>`,
+ c=>`<path d="M-4-9C-14-14-24-14-30-9C-22-18-11-21-1-14Z" fill="${c}"/><path d="M0-12C-8-20-18-22-24-20C-15-26-6-24 2-16Z" fill="${shade(c,.15)}"/>`,
+ (c,s)=>`<path d="M-9-4L-25-13L-14 3Z" fill="${s}"/><path d="M-6-9L-19-21L-11-4Z" fill="${shade(s,.15)}"/>`
+];
+const artCache=new Map();
+function dragonSVG(id,stage,opt){
+  opt=opt||{};const key=id+'|'+stage+'|'+(opt.flip?1:0)+(opt.sil?1:0);
+  if(artCache.has(key))return artCache.get(key);
+  const d=DR(id),r=rng(id*9973+17);
+  const els=d.els[0]==='aether'?[d.els[1],'aether']:d.els;
+  const E1=EL[els[0]],E2=EL[els[1]||els[0]],E3=EL[els[2]||els[1]||els[0]];
+  let P=E1.c,S=els[1]?E2.c:E1.c2,A=els[2]?E3.c:(els[1]?E2.c2:shade(E1.c,-.32));
+  if(els[1]&&r()<.35){[P,S]=[S,P]}
+  P=shade(P,(r()-.5)*.26);
+  if(d.r==='L'){S=EL.aether.c;A='#ffd84d'}
+  let B=shade(P,.55),D=shade(P,-.35),ink='#1c2733';
+  const k=archOf(id),bw=.9+r()*.22,bh=.88+r()*.2;
+  const ht=Math.floor(r()*5),et=Math.floor(r()*4),mt=Math.floor(r()*4),hn=Math.floor(r()*6),wt=Math.floor(r()*5),pat=Math.floor(r()*5),crest=r()<.55||d.r!=='C';
+  const ar=archetype(k,P,B,D,bw,bh);
+  const hs=[1.34,1.12,1][stage],bs=[.82,.92,1][stage],ws=[.42,.72,1][stage];
+  const bp=(x,y)=>[60+(x-60)*bs,100+(y-100)*bs];
+  const featBack=FEAT[els[0]],featTail=TAIL[els[1]||els[0]],featHead=CREST[els[2]||els[1]||els[0]];
+  let g='';
+  if(d.r==='E')g+=`<ellipse cx="58" cy="60" rx="54" ry="44" fill="${A}" opacity=".16"/>`;
+  if(d.r==='L')g+=`<ellipse cx="58" cy="58" rx="56" ry="47" fill="${S}" opacity=".18"/><ellipse cx="58" cy="58" rx="45" ry="37" fill="#8ff0ff" opacity=".16"/>`;
+  g+=`<ellipse cx="${ar.sh[0]}" cy="104" rx="${ar.sh[1]*bs}" ry="5" fill="#000" opacity="${ar.sh[2]}"/>`;
+  // wing
+  const [wx,wy]=bp(ar.wing[0],ar.wing[1]);const wtype=ar.avian?4:wt;
+  g+=at(wx,wy,0,ar.wing[2]*ws,WINGS[wtype](S,shade(S,-.32)));
+  // body (scaled)
+  let b=ar.under;
+  b+=at(ar.tail[0],ar.tail[1],ar.tail[2],stage?1.25:.9,featTail);
+  b+=ar.body;
+  const[cx,cy]=ar.c;
+  if(pat===0)b+=`<circle cx="${cx-8}" cy="${cy-6}" r="4" fill="${S}" opacity=".75"/><circle cx="${cx}" cy="${cy-10}" r="3" fill="${S}" opacity=".75"/><circle cx="${cx-12}" cy="${cy+4}" r="3" fill="${S}" opacity=".75"/>`;
+  if(pat===1)b+=`<path d="M${cx-12} ${cy-12}q-4 8 0 16M${cx-4} ${cy-14}q-4 8 0 16M${cx+4} ${cy-14}q-3 6 0 12" stroke="${S}" stroke-width="3" fill="none" opacity=".7" stroke-linecap="round"/>`;
+  if(pat===3)b+=at(cx-6,cy+2,0,.75,featBack.replace(/opacity="[^"]*"/g,''));
+  if(pat===4)b+=`<path d="M${cx+4} ${cy+2}h10M${cx+3} ${cy+7}h12M${cx+4} ${cy+12}h10" stroke="${shade(B,-.18)}" stroke-width="2" stroke-linecap="round"/>`;
+  if(stage>0)ar.back.forEach(([x,y,a],i)=>{b+=at(x,y,a,stage===1?.7:.92+(i===1?.12:0),featBack)});
+  b+=ar.over;
+  g+=`<g transform="translate(60 100) scale(${bs}) translate(-60 -100)">${b}</g>`;
+  // head
+  const [hx,hy]=bp(ar.head[0],ar.head[1]);
+  let h=HORNS[hn](A,S);
+  const beak=ar.avian||ht===3;
+  let sx=13,sy=5;
+  if(beak){h+=`<circle r="13" fill="${P}"/><path d="M9-3L27 4L9 10Z" fill="#ffc44d" stroke="#c98a00" stroke-width="1.4" stroke-linejoin="round"/><path d="M10 4L25 4" stroke="#c98a00" stroke-width="1"/>`;}
+  else if(ht===0)h+=`<circle r="14" fill="${P}"/><ellipse cx="13" cy="5" rx="9.5" ry="7.5" fill="${P}"/>`;
+  else if(ht===1){h+=`<ellipse rx="13" ry="12" fill="${P}"/><ellipse cx="17" cy="5" rx="13" ry="6.5" fill="${P}"/>`;sx=19}
+  else if(ht===2){h+=`<rect x="-13" y="-12" width="26" height="24" rx="8" fill="${P}"/><rect x="6" y="-2" width="18" height="13" rx="5" fill="${P}"/>`;sx=16}
+  else{h+=`<path d="M-14-2L-24-9L-21 4Z" fill="${S}"/><ellipse cy="1" rx="16" ry="11" fill="${P}"/><ellipse cx="13" cy="5" rx="11" ry="6.5" fill="${P}"/>`}
+  if(!beak){h+=`<ellipse cx="${sx}" cy="${sy+4}" rx="7" ry="3" fill="${B}"/><circle cx="${sx+7}" cy="${sy-3}" r="1.3" fill="${ink}"/>`;
+    const m0=`M${sx-5} ${sy+5}q5 3 10-1`;
+    h+=mt===2?`<ellipse cx="${sx}" cy="${sy+6}" rx="5" ry="3.4" fill="#5a1f2b"/><ellipse cx="${sx}" cy="${sy+7.5}" rx="3" ry="1.5" fill="#ff8fa3"/>`:`<path d="${m0}" stroke="${ink}" stroke-width="1.6" fill="none" stroke-linecap="round"/>`;
+    if(mt===1)h+=`<path d="M${sx-3} ${sy+6}l1.4 3 1.4-3Z M${sx+2} ${sy+6}l1.2 2.6 1.2-2.6Z" fill="#fff"/>`;
+    if(mt===3)h+=`<path d="M${sx+1} ${sy+6}q2 5 4 1Z" fill="#ff8fa3"/>`;}
+  if(et===0)h+=`<ellipse cx="2" cy="-4" rx="5.6" ry="6.2" fill="#fff"/><circle cx="3.6" cy="-3" r="3.3" fill="${ink}"/><circle cx="4.8" cy="-4.6" r="1.2" fill="#fff"/><ellipse cx="-4" cy="6" rx="3.6" ry="2.2" fill="#ff7b9c" opacity=".45"/>`;
+  if(et===1)h+=`<ellipse cx="2" cy="-4" rx="5.6" ry="5" fill="#fff"/><circle cx="3.4" cy="-3" r="3" fill="${ink}"/><path d="M-4.5-5Q2-11.5 8.5-5L8.5-3.6Q2-7.5-4.5-3.6Z" fill="${shade(P,-.1)}"/>`;
+  if(et===2)h+=`<ellipse cx="2" cy="-4" rx="5.4" ry="4.6" fill="#fff"/><ellipse cx="3.4" cy="-4" rx="1.5" ry="4" fill="${ink}"/><path d="M-5-10L8.5-7" stroke="${ink}" stroke-width="2.4" stroke-linecap="round"/>`;
+  if(et===3)h+=`<ellipse cx="2.5" cy="-4" rx="5" ry="6" fill="${ink}"/><circle cx="4" cy="-6.4" r="1.9" fill="#fff"/><circle cx="1" cy="-1.6" r="1" fill="#fff"/><ellipse cx="-4" cy="6" rx="3.6" ry="2.2" fill="#ff7b9c" opacity=".45"/>`;
+  if(crest&&stage>0)h+=at(-2,els[2]==='shade'||(!els[2]&&els[1]==='shade')||(!els[1]&&els[0]==='shade')?-14:-12,0,.8,featHead);
+  g+=at(hx,hy,0,ar.head[2]*hs*bs,h);
+  if(d.r==='E')g+=`<path d="M18 22l1.6 4 4 1.6-4 1.6-1.6 4-1.6-4-4-1.6 4-1.6z" fill="#fff"/>`;
+  if(d.r==='L')g+=`<path d="M16 18l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#fff6a8"/><path d="M104 70l1.5 3.5 3.5 1.5-3.5 1.5-1.5 3.5-1.5-3.5-3.5-1.5 3.5-1.5z" fill="#fff"/>`;
+  g=`<g transform="translate(60 106) scale(.88) translate(-60 -106)">${g}</g>`;let out=opt.flip?`<g transform="translate(120 0) scale(-1 1)">${g}</g>`:g;
+  if(opt.sil)out=silify(out);
+  if(ar.fly&&!opt.sil)out=`<g class="hover">${out}</g>`;
+  const svg=`<svg viewBox="0 0 120 110" xmlns="http://www.w3.org/2000/svg">${out}</svg>`;
+  artCache.set(key,svg);return svg}
+function eggSVG(id){
+  const d=DR(id),r=rng(id*31+5),E1=EL[d.els[0]],E2=EL[d.els[1]||d.els[0]];
+  let base=d.els[0]==='aether'?E2.c:E1.c,sp=d.els[1]?E2.c:E1.c2;if(d.els[0]==='aether')sp=EL.aether.c;
+  const pat=Math.floor(r()*3);let p='';
+  if(pat===0)p=`<circle cx="44" cy="40" r="6" fill="${sp}"/><circle cx="64" cy="56" r="8" fill="${sp}"/><circle cx="48" cy="70" r="5" fill="${sp}"/><circle cx="66" cy="32" r="4" fill="${sp}"/>`;
+  if(pat===1)p=`<path d="M30 50q10-8 20 0t20 0t20 0" stroke="${sp}" stroke-width="6" fill="none"/><path d="M32 68q10-8 20 0t20 0" stroke="${sp}" stroke-width="5" fill="none"/>`;
+  if(pat===2)p=`<path d="M40 22l6 12-8 10 10 12-6 14" stroke="${sp}" stroke-width="5" fill="none" stroke-linejoin="round"/>`;
+  const rc=RAR[d.r].col;
+  return `<svg viewBox="0 0 110 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="55" cy="92" rx="26" ry="5" fill="#000" opacity=".15"/><clipPath id="eg${id}"><path d="M55 10C80 10 86 50 86 62A31 30 0 0 1 24 62C24 50 30 10 55 10Z"/></clipPath><path d="M55 10C80 10 86 50 86 62A31 30 0 0 1 24 62C24 50 30 10 55 10Z" fill="${base}" stroke="${shade(base,-.35)}" stroke-width="3"/><g clip-path="url(#eg${id})">${p}</g><ellipse cx="44" cy="30" rx="6" ry="10" fill="#fff" opacity=".45" transform="rotate(20 44 30)"/>${d.r!=='C'?`<circle cx="80" cy="18" r="6" fill="${rc}" stroke="#fff" stroke-width="2"/>`:''}</svg>`}
+
+/* ================= icons ================= */
+const IC={
+ gold:`<svg viewBox="0 0 32 32"><circle cx="16" cy="17" r="12" fill="#c98700"/><circle cx="16" cy="15" r="12" fill="#ffc933"/><circle cx="16" cy="15" r="8" fill="none" stroke="#e39b00" stroke-width="2"/><path d="M13 11h6M13 19h6M16 9v12" stroke="#e39b00" stroke-width="2"/></svg>`,
+ food:`<svg viewBox="0 0 32 32"><path d="M16 6c2-3 6-3 7-1-3 0-5 1-6 3" fill="#3fae4a"/><circle cx="11" cy="18" r="6" fill="#e5484d"/><circle cx="20" cy="15" r="6" fill="#ff6b6b"/><circle cx="18" cy="24" r="6" fill="#d63a40"/><circle cx="18" cy="13" r="1.6" fill="#fff" opacity=".7"/></svg>`,
+ gem:`<svg viewBox="0 0 32 32"><path d="M8 6h16l6 8-14 14L2 14z" fill="#16c1d6"/><path d="M8 6l4 8h8l4-8M2 14h28M12 14l4 14 4-14" stroke="#0a8597" stroke-width="1.6" fill="none"/><path d="M10 8l2 5h-6z" fill="#fff" opacity=".6"/></svg>`,
+ xp:`<svg viewBox="0 0 32 32"><path d="M16 3l4 8.5 9 1.2-6.6 6.2 1.7 9L16 23.6 7.9 28l1.7-9L3 12.7l9-1.2z" fill="#9cf06b" stroke="#36b24a" stroke-width="2"/></svg>`,
+ shop:`<svg viewBox="0 0 40 40"><path d="M6 16h28l-2 18H8z" fill="#fff"/><path d="M4 16l4-8h24l4 8z" fill="#ffe08a"/><path d="M4 16h8v2a4 4 0 0 1-8 0zM12 16h8v2a4 4 0 0 1-8 0zM20 16h8v2a4 4 0 0 1-8 0zM28 16h8v2a4 4 0 0 1-8 0z" fill="#e5484d"/><rect x="16" y="24" width="8" height="10" fill="#9a6b3d"/></svg>`,
+ book:`<svg viewBox="0 0 40 40"><path d="M6 8c5-2 10-2 14 1v24c-4-3-9-3-14-1z" fill="#fff"/><path d="M34 8c-5-2-10-2-14 1v24c4-3 9-3 14-1z" fill="#ffe8b0"/><path d="M27 14c2 0 3 2 2 4l-3 3-3-3c-1-2 0-4 2-4" fill="#e5484d"/></svg>`,
+ sword:`<svg viewBox="0 0 40 40"><path d="M28 6l6 0 0 6-16 16-6-6z" fill="#eef4f8"/><path d="M10 20l10 10-3 3-10-10z" fill="#ffc933"/><path d="M8 28l4 4-4 4-4-4z" fill="#9a6b3d"/></svg>`,
+ dragons:`<svg viewBox="0 0 40 40"><path d="M8 30c0-10 6-16 14-16 3-5 8-6 11-5-2 2-3 4-3 6 3 2 4 6 3 9-4 0-6-2-8-4-2 4-6 8-12 10z" fill="#fff"/><circle cx="27" cy="14" r="1.8" fill="#17324d"/><path d="M14 20l-6-8 2 9" fill="#ffe08a"/></svg>`,
+ goals:`<svg viewBox="0 0 40 40"><rect x="8" y="6" width="24" height="30" rx="4" fill="#fff"/><path d="M13 15l3 3 6-6M13 25l3 3 6-6" stroke="#36b24a" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M24 17h4M24 27h4" stroke="#9fb2c3" stroke-width="3" stroke-linecap="round"/></svg>`,
+ cog:`<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="none" stroke="#fff" stroke-width="5" stroke-dasharray="3.2 2.3"/><circle cx="12" cy="12" r="3" fill="#fff"/></svg>`,
+ coinsAll:`<svg viewBox="0 0 40 40"><circle cx="15" cy="24" r="9" fill="#c98700"/><circle cx="15" cy="22" r="9" fill="#ffc933"/><circle cx="25" cy="17" r="9" fill="#c98700"/><circle cx="25" cy="15" r="9" fill="#ffd95c"/><path d="M25 10v10M21 12h8M21 18h8" stroke="#e39b00" stroke-width="2"/></svg>`,
+ home:`<svg viewBox="0 0 40 40"><path d="M6 20L20 8l14 12" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 18v14h7v-8h6v8h7V18" fill="#fff"/></svg>`,
+ lock:`<svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3" fill="#ffc933" stroke="#9a6b00" stroke-width="1.6"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="#9a6b00" stroke-width="2.2" fill="none"/></svg>`
+};
+const price=(k,v)=>`<span class="price">${IC[k]}${fmt(v)}</span>`;
+
+/* ================= guide character (original) ================= */
+const OWL=`<svg viewBox="0 0 90 100" class="owl"><ellipse cx="45" cy="96" rx="26" ry="4" fill="#000" opacity=".15"/><path d="M14 56C10 30 26 12 45 12S80 30 76 56C74 82 62 94 45 94S16 82 14 56Z" fill="#8a5a36"/><path d="M26 66C26 52 34 46 45 46S64 52 64 66C64 82 56 90 45 90S26 82 26 66Z" fill="#f3dcb2"/><path d="M32 62l3 3 3-3M42 70l3 3 3-3M52 62l3 3 3-3M37 78l3 3 3-3M47 78l3 3 3-3" stroke="#c9a46e" stroke-width="2" fill="none"/><path d="M18 30L12 12L28 22Z M72 30L78 12L62 22Z" fill="#6b4226"/><circle cx="33" cy="36" r="13" fill="#fff" stroke="#3a6ea5" stroke-width="4"/><circle cx="57" cy="36" r="13" fill="#fff" stroke="#3a6ea5" stroke-width="4"/><path d="M46 36h-0" stroke="#3a6ea5" stroke-width="4"/><circle cx="35" cy="37" r="6" fill="#1c2733"/><circle cx="55" cy="37" r="6" fill="#1c2733"/><circle cx="37" cy="35" r="2" fill="#fff"/><circle cx="57" cy="35" r="2" fill="#fff"/><path d="M41 46L45 54L49 46Z" fill="#ffb400"/><path d="M14 56C6 62 6 74 14 80C18 70 20 62 20 56Z M76 56C84 62 84 74 76 80C72 70 70 62 70 56Z" fill="#6b4226"/><path d="M34 12C38 4 52 4 56 12" stroke="#2f86de" stroke-width="6" fill="none" stroke-linecap="round"/><circle cx="45" cy="5" r="4" fill="#ffd84d"/></svg>`;
+
+/* ================= world layout ================= */
+const CW=56,CH=40,IC_=12,IR=8;
+const FP={habitat:[2,2],farm:[2,2],hatchery:[2,2],tree:[2,2],deco:[1,1]};
+const ISLANDS=[
+ {name:'Home Isle',cx:1500,cy:1000,lv:1,plots:[0,1500,4000,8000]},
+ {name:'Mossy Reach',cx:640,cy:960,lv:3,plots:[6000,7000,9000,10000]},
+ {name:'Coral Rise',cx:2360,cy:980,lv:5,plots:[12000,14000,16000,18000]},
+ {name:'Cloudtop',cx:1520,cy:400,lv:8,plots:[25000,28000,30000,34000]},
+ {name:'Sunken Shelf',cx:1480,cy:1620,lv:11,plots:[40000,45000,50000,55000]}];
+const ARENA_IS={cx:2420,cy:420};
+const isoX=i=>ISLANDS[i].cx-IC_*CW/2, isoY=i=>ISLANDS[i].cy-IR*CH/2;
+const plotOf=(x,y)=>(x<6?0:1)+(y<4?0:2);
+const plotRect=(i,p)=>({x:isoX(i)+(p%2)*6*CW,y:isoY(i)+(p>1?4:0)*CH,w:6*CW,h:4*CH});
+const levelXP=l=>Math.round(80*Math.pow(l,1.55));
+
+/* ================= catalog ================= */
+const HAB_LV={ember:1,grove:1,tide:2,stone:2,storm:3,frost:3,wind:4,shade:5,radiant:5,metal:5,aether:6};
+const HAB_COST={ember:500,grove:500,tide:900,stone:900,storm:1600,frost:1600,wind:2400,shade:3500,radiant:3500,metal:3500};
+const CROPS=[
+ {id:'berry',n:'Dragonberry',t:30e3,food:20,cost:50,lv:1,c:'#e5484d'},
+ {id:'pepper',n:'Sunpepper',t:5*60e3,food:70,cost:150,lv:1,c:'#ff8a1f'},
+ {id:'melon',n:'Moonmelon',t:30*60e3,food:300,cost:500,lv:3,c:'#7bd1ff'},
+ {id:'root',n:'Skyroot',t:2*3600e3,food:900,cost:1400,lv:5,c:'#b06cd9'},
+ {id:'plum',n:'Starplum',t:8*3600e3,food:3000,cost:4000,lv:8,c:'#ff6fae'}];
+const DECOS=[
+ {id:'pine',n:'Sky Pine',cost:150,cur:'gold',lv:1,xp:5},
+ {id:'rock',n:'Mossy Rock',cost:100,cur:'gold',lv:1,xp:4},
+ {id:'flowers',n:'Flower Patch',cost:120,cur:'gold',lv:1,xp:5},
+ {id:'lantern',n:'Glow Lantern',cost:400,cur:'gold',lv:3,xp:12},
+ {id:'fountain',n:'Fountain',cost:1500,cur:'gold',lv:4,xp:40},
+ {id:'statue',n:'Egg Statue',cost:15,cur:'gems',lv:2,xp:60}];
+
+/* ================= state ================= */
+let S=null;
+const session={user:null,token:null,online:false};
+function fresh(){
+  const s={v:2,savedAt:0,gold:2000,food:0,gems:10,xp:0,level:1,uid:1,tiles:[],dragons:[],eggs:[],hatchCap:3,breed:null,book:{},arena:{cleared:0},goals:{},stats:{feeds:0,breeds:0,hatches:0,wins:0,harvests:0,collects:0},lastDaily:'',land:ISLANDS.map((_,i)=>i===0?[1,0,0,0]:[0,0,0,0]),tut:0};
+  s.tiles.push({id:s.uid++,type:'hatchery',is:0,x:0,y:0});
+  s.tiles.push({id:s.uid++,type:'tree',is:0,x:4,y:0});
+  return s}
+const tileById=id=>S.tiles.find(t=>t.id===id);
+const fpOf=t=>FP[t.type];
+function occupant(is,x,y,ignore){return S.tiles.find(t=>t.id!==ignore&&t.is===is&&x>=t.x&&x<t.x+fpOf(t)[0]&&y>=t.y&&y<t.y+fpOf(t)[1])}
+const owned=(is,x,y)=>x>=0&&y>=0&&x<IC_&&y<IR&&S.land[is][plotOf(x,y)];
+function canPlace(is,x,y,w,h,ignore){for(let i=0;i<w;i++)for(let j=0;j<h;j++){if(!owned(is,x+i,y+j)||occupant(is,x+i,y+j,ignore))return false}return true}
+function findSpot(w,h,ignore){for(let is=0;is<ISLANDS.length;is++)for(let y=0;y<=IR-h;y++)for(let x=0;x<=IC_-w;x++)if(canPlace(is,x,y,w,h,ignore))return{is,x,y};return null}
+const dragonsIn=hid=>S.dragons.filter(d=>d.hab===hid);
+const habCap=t=>1+t.lvl;
+const habGoldCap=t=>400*t.lvl*t.lvl;
+function habRate(t){return dragonsIn(t.id).reduce((s,d)=>s+rateOf(DR(d.did),d.lvl),0)}
+function goldOf(t){return Math.min(habGoldCap(t),t.gold+habRate(t)*(now()-t.t)/60000)}
+function bank(t){t.gold=goldOf(t);t.t=now()}
+function compatHabs(did,exclude){const d=DR(did);return S.tiles.filter(t=>t.type==='habitat'&&d.els.includes(t.el)&&t.id!==exclude&&dragonsIn(t.id).length<habCap(t))}
+const countType=(type,el)=>S.tiles.filter(t=>t.type===type&&(!el||t.el===el)).length;
+function habCost(el){if(el==='aether')return{cur:'gems',v:40+20*countType('habitat','aether')};return{cur:'gold',v:Math.round(HAB_COST[el]*(1+.6*countType('habitat',el)))}}
+const farmCost=()=>Math.round(300*Math.pow(1.7,countType('farm')));
+const eggCost=i=>300+350*HAB_LV[BASE[i]];
+const wholePrice=i=>Math.round(ISLANDS[i].plots.reduce((s,v,p)=>s+(S.land[i][p]?0:v),0)*.75);
+
+/* ================= save / load ================= */
+const lkey=()=>'dh_save_'+(session.user||'guest');
+let dirty=false,saveState='';
+function saveLocal(){S.savedAt=now();try{localStorage.setItem(lkey(),JSON.stringify(S))}catch(e){}}
+function loadLocal(){try{const j=localStorage.getItem(lkey());return j?JSON.parse(j):null}catch(e){return null}}
+async function api(path,opt){opt=opt||{};const headers={'Content-Type':'application/json'};if(session.token)headers.Authorization='Bearer '+session.token;
+  const r=await fetch(path,{method:opt.method||'GET',headers,body:opt.body?JSON.stringify(opt.body):undefined,keepalive:!!opt.keepalive});
+  const j=await r.json().catch(()=>({}));if(!r.ok){const e=new Error(j.error||('Error '+r.status));e.status=r.status;e.data=j;throw e}return j}
+async function saveCloud(force,keepalive){
+  if(!session.token||!S)return;
+  try{setSave('Saving…');await api('/api/save',{method:'PUT',body:{save:S,force:!!force},keepalive});dirty=false;setSave('Saved')}
+  catch(e){if(e.status===409&&e.data&&e.data.save){S=migrate(e.data.save);toast('Loaded a newer save from another device');renderAll()}else if(e.status===401)setSave('Log in again to save online');else setSave('Offline, saved on this device')}}
+function setSave(t){saveState=t;const el=$('#saveDot');if(el)el.textContent=t}
+function commit(){saveLocal();dirty=true;renderWorld();renderHud();checkGoalsDot();tutCheck()}
+function migrate(s){if(!s||s.v!==2){setTimeout(()=>toast('Dragon Haven was updated with new islands, so you are starting fresh'),800);return fresh()}
+  const f=fresh();for(const k in f)if(!(k in s))s[k]=f[k];s.dragons=s.dragons.filter(d=>d.did<RELEASED);return s}
+
+/* ================= progression ================= */
+function addXP(n){S.xp+=n;let up=false;while(S.xp>=levelXP(S.level)){S.xp-=levelXP(S.level);S.level++;up=true;S.gems+=2}
+  if(up)toast(`Level ${S.level}! +2 gems. New items in the shop`,'xp')}
+function spend(cur,v){if(S[cur]<v){toast(`Not enough ${cur}`,cur);return false}S[cur]-=v;return true}
+function discover(did){if(!S.book[did]){S.book[did]=1;toast(`New dragon in your Book: ${DR(did).name}!`,'book')}}
+
+/* ================= camera ================= */
+const svgEl=$('#world'),camEl=$('#cam');
+const cam={x:1500,y:1000,z:1};let VW=1000,VH=600;
+function zLimits(){return[Math.max(VW/2900,VH/2000)*1.05,2.4]}
+function clampCam(){const[a,b]=zLimits();cam.z=Math.max(a,Math.min(b,cam.z));const hw=VW/2/cam.z,hh=VH/2/cam.z;cam.x=Math.max(250+Math.min(hw,1250),Math.min(2750-Math.min(hw,1250),cam.x));cam.y=Math.max(150+Math.min(hh,850),Math.min(1950-Math.min(hh,850),cam.y))}
+function applyCam(){clampCam();camEl.setAttribute('transform',`translate(${(VW/2-cam.x*cam.z).toFixed(1)} ${(VH/2-cam.y*cam.z).toFixed(1)}) scale(${cam.z.toFixed(4)})`)}
+function resize(){const r=svgEl.getBoundingClientRect();VW=r.width||innerWidth;VH=r.height||innerHeight;svgEl.setAttribute('viewBox',`0 0 ${VW} ${VH}`);applyCam()}
+function homeCam(){cam.x=ISLANDS[0].cx;cam.y=ISLANDS[0].cy+20;cam.z=Math.min(VW/880,VH/560);applyCam()}
+function toWorld(cx,cy){const r=svgEl.getBoundingClientRect();return{x:(cx-r.left-VW/2)/cam.z+cam.x,y:(cy-r.top-VH/2)/cam.z+cam.y}}
+function panTo(x,y){const sx=cam.x,sy=cam.y,t0=performance.now();const step=t=>{const k=Math.min(1,(t-t0)/400),e=1-Math.pow(1-k,3);cam.x=sx+(x-sx)*e;cam.y=sy+(y-sy)*e;applyCam();if(k<1)requestAnimationFrame(step)};requestAnimationFrame(step)}
+
+/* ================= world rendering ================= */
+let mode=null; // {kind:'place'|'move', item?, tid?, w, h, ghost:{is,x,y}}
+function blob(cx,cy,a,b,seed){const r=rng(seed),s1=r()*6,s2=r()*6,pts=[];
+  for(let i=0;i<56;i++){const t=i/56*Math.PI*2,c=Math.cos(t),s=Math.sin(t),n=1+.03*Math.sin(3*t+s1)+.02*Math.sin(7*t+s2);pts.push([cx+a*Math.sign(c)*Math.pow(Math.abs(c),.5)*n,cy+b*Math.sign(s)*Math.pow(Math.abs(s),.5)*n])}
+  let d=`M${((pts[0][0]+pts[55][0])/2).toFixed(1)} ${((pts[0][1]+pts[55][1])/2).toFixed(1)}`;
+  pts.forEach((p,i)=>{const q=pts[(i+1)%56];d+=`Q${p[0].toFixed(1)} ${p[1].toFixed(1)} ${((p[0]+q[0])/2).toFixed(1)} ${((p[1]+q[1])/2).toFixed(1)}`});return d+'Z'}
+function underside(cx,cy,a,b,seed){const r=rng(seed+9),dep=b+150+r()*50;
+  return `<path d="M${cx-a} ${cy+8}Q${cx-a*.85} ${cy+b+50} ${cx-a*.5} ${cy+b+80}L${cx-a*.3} ${cy+b+120}L${cx-a*.12} ${cy+dep-30}L${cx} ${cy+dep}L${cx+a*.15} ${cy+dep-40}L${cx+a*.32} ${cy+b+110}L${cx+a*.55} ${cy+b+75}Q${cx+a*.88} ${cy+b+45} ${cx+a} ${cy+8}Z" fill="url(#rock)"/>
+  <path d="M${cx-a*.7} ${cy+b+40}Q${cx} ${cy+b+80} ${cx+a*.7} ${cy+b+40}M${cx-a*.4} ${cy+b+95}Q${cx} ${cy+b+120} ${cx+a*.4} ${cy+b+92}" stroke="#4e321e" stroke-width="4" fill="none" opacity=".5"/>
+  ${[-.6,-.2,.3,.65].map((f,i)=>`<path d="M${cx+a*f} ${cy+b+30}c${4-i*3} 20 ${-6+i*2} 34 ${i%2?6:-4} 50" stroke="#3f8a2a" stroke-width="4" fill="none" stroke-linecap="round"/>`).join('')}`}
+function islandTop(i){const I=ISLANDS[i],a=400,b=222;
+  return `<path d="${blob(I.cx,I.cy+24,a,b,i*13+1)}" fill="#7b4f2e"/><path d="${blob(I.cx,I.cy+14,a,b,i*13+1)}" fill="#4f9a35"/><path d="${blob(I.cx,I.cy,a,b,i*13+1)}" fill="url(#gtop)" stroke="#9be07a" stroke-width="3"/>`}
+function grassBits(i){const r=rng(i*77+3);let s='';const x0=isoX(i),y0=isoY(i);
+  for(let k=0;k<70;k++){const gx=r()*IC_,gy=r()*IR,cx=Math.floor(gx),cy=Math.floor(gy);if(!S.land[i][plotOf(cx,cy)]||occupant(i,cx,cy))continue;const x=x0+gx*CW,y=y0+gy*CH,t=r();
+    s+=t<.55?`<path d="M${x.toFixed(0)} ${y.toFixed(0)}l-3-8M${x.toFixed(0)} ${y.toFixed(0)}l1-10M${x.toFixed(0)} ${y.toFixed(0)}l4-7" stroke="#4fa83a" stroke-width="2.2" stroke-linecap="round"/>`:t<.8?`<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="3" fill="${['#fff','#ffd84d','#ff8fb8'][k%3]}"/><circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="1.2" fill="#ffb400"/>`:`<ellipse cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" rx="10" ry="4" fill="#67bf48" opacity=".7"/>`}
+  // dirt paths
+  return s}
+function lockedPlot(i,p){const R=plotRect(i,p),r=rng(i*100+p*7+5),I=ISLANDS[i];const lvlLock=S.level<I.lv;let s=`<g class="plot" data-plot="${i}:${p}">`;
+  s+=`<rect class="lockpatch" x="${R.x+4}" y="${R.y+4}" width="${R.w-8}" height="${R.h-8}" rx="26" fill="#3f7a2c" opacity=".92"/>`;
+  const items=[];for(let k=0;k<11;k++)items.push([R.x+20+r()*(R.w-40),R.y+18+r()*(R.h-36),r()]);items.sort((a,b)=>a[1]-b[1]);
+  items.forEach(([x,y,t])=>{if(Math.abs(x-(R.x+R.w/2))<60&&Math.abs(y-(R.y+R.h/2))<40)return;
+    s+=t<.45?`<circle cx="${x}" cy="${y}" r="15" fill="#2f6b22"/><circle cx="${x-9}" cy="${y+4}" r="11" fill="#357a26"/><circle cx="${x+8}" cy="${y-5}" r="10" fill="#3d8a2c"/>`:t<.7?`<path d="M${x-14} ${y+6}L${x-9} ${y-8}L${x+4} ${y-12}L${x+14} ${y+6}Z" fill="#8f97a0" stroke="#6b737c" stroke-width="2"/>`:`<rect x="${x-3}" y="${y-4}" width="6" height="12" fill="#6b4226"/><path d="M${x} ${y-40}l16 30h-32z" fill="#246b2f"/>`});
+  const cx=R.x+R.w/2,cy=R.y+R.h/2;
+  s+=`<rect x="${cx-3}" y="${cy-6}" width="6" height="34" fill="#7a5233"/><rect x="${cx-58}" y="${cy-34}" width="116" height="38" rx="9" fill="#f3dcb2" stroke="#9a6b3d" stroke-width="3"/>`;
+  s+=lvlLock?`<svg x="${cx-52}" y="${cy-28}" width="26" height="26" viewBox="0 0 24 24">${inner(IC.lock)}</svg><text x="${cx+12}" y="${cy-9}" text-anchor="middle" font-family="Baloo 2,Nunito,sans-serif" font-weight="800" font-size="19" fill="#5a3300">Level ${I.lv}</text>`
+    :`<svg x="${cx-52}" y="${cy-29}" width="28" height="28" viewBox="0 0 32 32">${inner(IC.gold)}</svg><text x="${cx+14}" y="${cy-8}" text-anchor="middle" font-family="Baloo 2,Nunito,sans-serif" font-weight="800" font-size="21" fill="#5a3300">${fmt(I.plots[p])}</text>`;
+  return s+'</g>'}
+function islandSign(i){const I=ISLANDS[i],x=isoX(i)-30,y=isoY(i)-30;return `<g pointer-events="none"><rect x="${x}" y="${y}" width="${I.name.length*11+30}" height="30" rx="15" fill="rgba(23,50,77,.85)"/><text x="${x+15}" y="${y+21}" font-family="Baloo 2,Nunito,sans-serif" font-weight="800" font-size="17" fill="#fff">${esc(I.name)}</text></g>`}
+function bridge(x1,y1,x2,y2){const n=Math.max(4,Math.round(Math.hypot(x2-x1,y2-y1)/22)),dx=(x2-x1)/n,dy=(y2-y1)/n,ang=Math.atan2(y2-y1,x2-x1)*180/Math.PI;let s=`<path d="M${x1} ${y1}L${x2} ${y2}" stroke="#5d3b22" stroke-width="40" stroke-linecap="round" opacity=".35"/>`;
+  for(let k=0;k<=n;k++)s+=`<rect x="-9" y="-20" width="16" height="40" rx="3" fill="${k%2?'#b5835a':'#a37350'}" stroke="#6b4428" stroke-width="2" transform="translate(${x1+dx*k} ${y1+dy*k}) rotate(${ang})"/>`;
+  s+=`<path d="M${x1} ${y1}L${x2} ${y2}" stroke="#6b4428" stroke-width="3" transform="translate(${Math.sin(ang*Math.PI/180)*-20} ${Math.cos(ang*Math.PI/180)*20})"/>`;return s}
+function decoSVG(kind){switch(kind){
+ case'pine':return`<rect x="-4" y="-18" width="8" height="14" fill="#8a5a36"/><path d="M0-70l20 30h-10l14 22h-48l14-22h-10z" fill="#2f8f3e"/>`;
+ case'rock':return`<path d="M-26-4l6-22 18-8 18 10 6 20z" fill="#9aa3ad"/><path d="M-20-24l18-8 10 6-16 8z" fill="#6cc24a"/>`;
+ case'flowers':return[-20,-6,10,22].map((x,i)=>`<path d="M${x}-4v-14" stroke="#2f8f3e" stroke-width="3"/><circle cx="${x}" cy="-20" r="6" fill="${['#ff6fae','#ffd84d','#fff','#ff8a1f'][i]}"/><circle cx="${x}" cy="-20" r="2.4" fill="#ffb400"/>`).join('');
+ case'lantern':return`<rect x="-2" y="-60" width="4" height="56" fill="#5d4a3a"/><circle cx="0" cy="-62" r="18" fill="url(#glow)"/><rect x="-8" y="-70" width="16" height="16" rx="4" fill="#ffd84d" stroke="#8a5a36" stroke-width="2"/>`;
+ case'fountain':return`<ellipse cx="0" cy="-8" rx="34" ry="10" fill="#9aa3ad"/><ellipse cx="0" cy="-10" rx="28" ry="7" fill="#5ab6ff"/><rect x="-5" y="-40" width="10" height="30" fill="#c2c9d0"/><path d="M0-42c-10-10-20 0-22 20M0-42c10-10 20 0 22 20" stroke="#8fe0ff" stroke-width="3" fill="none"/>`;
+ case'statue':return`<rect x="-20" y="-16" width="40" height="12" fill="#c2c9d0"/><path d="M0-76C16-76 20-50 20-40A20 20 0 0 1-20-40C-20-50-16-76 0-76Z" fill="#ffd84d" stroke="#c98700" stroke-width="3"/>`;
+}return''}
+function habFeature(el){switch(el){
+ case'ember':return`<ellipse cx="0" cy="-14" rx="26" ry="9" fill="#ff7a1a"/><ellipse cx="0" cy="-15" rx="16" ry="5" fill="#ffd23f"/><path d="M-40-8l8-26 10 6 4 18z M26-8l6-30 10 10 0 18z" fill="#5a3a2a"/><path d="M-6-22c2-10 8-12 6-20 6 6 8 12 2 20z" fill="#ff5a36"/>`;
+ case'tide':return`<ellipse cx="0" cy="-10" rx="34" ry="12" fill="#2b8cff"/><ellipse cx="-4" cy="-12" rx="22" ry="5" fill="#8fe0ff" opacity=".8"/><path d="M28-12l8-20 10 18z" fill="#8c98a6"/><path d="M-40-6q6-10 12 0" stroke="#fff" stroke-width="2" fill="none"/>`;
+ case'grove':return`<rect x="-30" y="-56" width="8" height="34" fill="#8a5a36"/><circle cx="-26" cy="-62" r="18" fill="#2f9640"/><circle cx="-36" cy="-54" r="12" fill="#3fae4a"/><circle cx="34" cy="-12" r="10" fill="#3fae4a"/><circle cx="40" cy="-20" r="8" fill="#5cc35a"/>`;
+ case'stone':return`<path d="M-42-8l8-30 18-4 8 30z" fill="#8f7559"/><path d="M18-8l10-36 16 8 2 28z" fill="#a98b69"/><path d="M-34-36l18-4 4 8-20 2z" fill="#c4a982"/>`;
+ case'storm':return`<rect x="-35" y="-52" width="6" height="44" fill="#4a5d8a"/><ellipse cx="-32" cy="-60" rx="24" ry="11" fill="#7d8aa8"/><ellipse cx="-42" cy="-66" rx="14" ry="10" fill="#9aa6c0"/><path d="M-28-52l-8 14h8l-6 14 14-18h-8l6-10z" fill="#f2d000"/>`;
+ case'frost':return`<path d="M-42-8l6-34 8 34z M-28-8l8-46 8 46z M26-8l6-28 8 28z" fill="#d4f4ff" stroke="#6fcdf0" stroke-width="2"/>`;
+ case'shade':return`<path d="M-36-8l4-50 10 6 2 44z" fill="#3a3060"/><path d="M-46-8l6-26 8 26z M28-8l8-30 8 30z" fill="#6a5aa8"/><circle cx="-28" cy="-40" r="4" fill="#c7b8ff"/>`;
+ case'radiant':return`<circle cx="-30" cy="-48" r="26" fill="url(#glow)"/><rect x="-38" y="-46" width="16" height="38" rx="3" fill="#fff1b0"/><circle cx="-30" cy="-50" r="9" fill="#ffd84d"/>`;
+ case'metal':return`<circle cx="30" cy="-34" r="16" fill="none" stroke="#8796a6" stroke-width="8" stroke-dasharray="5 4"/><circle cx="30" cy="-34" r="5" fill="#5d6d7e"/><path d="M-46-10h26v-12h8v-6h-38v6h4z" fill="#5d6d7e"/>`;
+ case'wind':return`<rect x="-32" y="-52" width="4" height="44" fill="#d9e1e8"/><g transform="translate(-30 -54)"><path d="M0 0L0-20L10-6Z M0 0L20 0L6 10Z M0 0L0 20L-10 6Z M0 0L-20 0L-6-10Z" fill="#4fc7a3"/></g>`;
+ case'aether':return`<path d="M-38-8a38 38 0 0 1 76 0" fill="none" stroke="#ff6fae" stroke-width="6"/><path d="M-30-8a30 30 0 0 1 60 0" fill="none" stroke="#ffd84d" stroke-width="6"/><path d="M-22-8a22 22 0 0 1 44 0" fill="none" stroke="#8ff0ff" stroke-width="6"/>`;
+}return''}
+function habBase(el){const e=EL[el];return`<ellipse cx="0" cy="5" rx="50" ry="17" fill="${shade(e.c,-.45)}"/><ellipse cx="0" cy="0" rx="50" ry="17" fill="${shade(e.c,.38)}" stroke="${shade(e.c,-.2)}" stroke-width="3"/>`}
+function bldBody(t){let s='';
+  if(t.type==='habitat'){
+    s+=habBase(t.el)+habFeature(t.el);
+    const ds=dragonsIn(t.id),pos=[[-14,2],[24,-4],[2,10],[-30,8]];
+    ds.forEach((d,i)=>{const[px,py]=pos[i]||[0,0];const st=stageOf(d.lvl),sz=[46,56,68][st],fl=(d.uid%3===0);
+      s+=`<g class="bob" style="animation-delay:-${(d.uid%5)*.6}s"><svg x="${px-sz/2}" y="${py-sz*.9}" width="${sz}" height="${sz*.92}" viewBox="0 0 120 110" overflow="visible">${inner(dragonSVG(d.did,st,{flip:fl}))}</svg></g>`});
+    for(let i=0;i<t.lvl;i++)s+=`<circle cx="${-40+i*9}" cy="12" r="3.4" fill="#ffd84d" stroke="#fff" stroke-width="1"/>`;
+  }else if(t.type==='farm'){
+    s+=`<rect x="-46" y="-26" width="92" height="38" rx="10" fill="#8a5a36"/><rect x="-42" y="-24" width="84" height="32" rx="8" fill="#a8703f"/>`;
+    for(let i=0;i<3;i++)s+=`<path d="M-38 ${-16+i*10}h76" stroke="#7a4a26" stroke-width="2"/>`;
+    if(t.crop){const c=CROPS.find(c=>c.id===t.crop),p=Math.min(1,1-(t.end-now())/c.t),sc=.35+.65*p;
+      for(let i=0;i<8;i++){const x=-30+(i%4)*20,y=-18+Math.floor(i/4)*16;s+=`<g transform="translate(${x} ${y}) scale(${sc.toFixed(2)})"><path d="M0 0v-12" stroke="#2f8f3e" stroke-width="3"/><path d="M0-8c-6-2-8-6-8-10c5 0 8 3 8 8c0-6 4-9 8-9c0 4-2 8-8 10" fill="#3fae4a"/>${p>=1?`<circle cx="0" cy="-14" r="5" fill="${c.c}"/>`:''}</g>`}}
+    s+=`<path d="M-46-26v-8M46-26v-8M-46-31h92M-46-31v40M46-31v40" stroke="#c8a070" stroke-width="3"/>`;
+  }else if(t.type==='hatchery'){
+    s+=`<ellipse cx="0" cy="4" rx="48" ry="15" fill="#6b7a88"/><path d="M-42 0C-42-54 42-54 42 0Z" fill="#b8c4cf"/><path d="M-42 0C-42-54 42-54 42 0" fill="none" stroke="#8796a6" stroke-width="4"/><path d="M-22 0a22 22 0 0 1 44 0Z" fill="#3a4a5a"/><path d="M-32-32h64" stroke="#8796a6" stroke-width="2" stroke-dasharray="6 6"/>`;
+    S.eggs.slice(0,3).forEach((e,i)=>{s+=`<svg x="${-28+i*19}" y="-20" width="20" height="20" viewBox="0 0 110 100">${inner(eggSVG(e.did))}</svg>`});
+    s+=`<path d="M-8-48l8-10 8 10z" fill="#ffb400"/>`;
+  }else if(t.type==='tree'){
+    s+=`<ellipse cx="0" cy="4" rx="44" ry="13" fill="#3c8a2a"/><path d="M-8 2C-6-20-12-30-4-44L4-44C10-30 6-20 8 2Z" fill="#8a5a36"/><circle cx="0" cy="-64" r="32" fill="#ff8fb8"/><circle cx="-22" cy="-50" r="19" fill="#ffa7c6"/><circle cx="22" cy="-50" r="19" fill="#ff7aa8"/><circle cx="0" cy="-82" r="17" fill="#ffb6d1"/>`;
+    s+=[[-14,-66],[10,-74],[18,-54],[-4,-50]].map(([x,y])=>`<path d="M${x} ${y}c-3-4-8 0-4 4l4 4 4-4c4-4-1-8-4-4z" fill="#e5484d"/>`).join('');
+    if(S.breed&&S.breed.end>now())s+=`<g class="heart"><path d="M0-100c-4-6-12 0-6 6l6 6 6-6c6-6-2-12-6-6z" fill="#e5484d"/></g><g class="heart" style="animation-delay:-1.2s"><path d="M-22-90c-3-4-9 0-4 4l4 4 4-4c5-4-1-8-4-4z" fill="#ff6fae"/></g>`;
+  }else if(t.type==='deco')s+=decoSVG(t.kind);
+  return s}
+function tileXY(t,pos){const p=pos||t,[w,h]=fpOf(t);return{x:isoX(p.is)+(p.x+w/2)*CW,y:isoY(p.is)+(p.y+h)*CH-10,s:t.type==='deco'?.95:1.08}}
+function buildingSVG(t){const{x,y,s}=tileXY(t);const faded=mode&&mode.kind==='move'&&mode.tid===t.id;
+  return `<g class="bld${faded?' faded':''}" data-tid="${t.id}" transform="translate(${x} ${y}) scale(${s})">${bldBody(t)}</g>`}
+function arenaIsland(){const{cx,cy}=ARENA_IS;return `<g class="arenaIs" data-arena="1"><g class="float"><path d="M${cx-130} ${cy+10}Q${cx-110} ${cy+90} ${cx-40} ${cy+110}L${cx} ${cy+170}L${cx+40} ${cy+110}Q${cx+110} ${cy+90} ${cx+130} ${cy+10}Z" fill="url(#rock)"/><path d="${blob(cx,cy+12,140,70,99)}" fill="#7b4f2e"/><path d="${blob(cx,cy,140,70,99)}" fill="url(#gtop)" stroke="#9be07a" stroke-width="3"/>
+  <g transform="translate(${cx} ${cy+30}) scale(1.6)"><ellipse cx="0" cy="2" rx="46" ry="16" fill="#9a8a70"/><path d="M-44 0v-30a44 14 0 0 1 88 0v30" fill="#e3cda6" stroke="#b39a74" stroke-width="3"/><ellipse cx="0" cy="-30" rx="44" ry="14" fill="#c9b08a"/><ellipse cx="0" cy="-30" rx="30" ry="8" fill="#7fc46a"/>${[0,1,2,3,4,5].map(i=>`<path d="M${-36+i*14}-2v-14a5 5 0 0 1 10 0v14z" fill="#9a8058"/>`).join('')}<path d="M-40-40v-26l14 6-14 6M40-40v-26l-14 6 14 6" stroke="#5d4a3a" stroke-width="2" fill="#e5484d"/></g>
+  <rect x="${cx-40}" y="${cy-96}" width="80" height="28" rx="14" fill="rgba(229,72,77,.92)"/><text x="${cx}" y="${cy-76}" text-anchor="middle" font-family="Baloo 2,Nunito,sans-serif" font-weight="800" font-size="17" fill="#fff">Arena</text></g></g>`}
+function gridLayer(){if(!mode)return'';let s='<g pointer-events="none">';
+  ISLANDS.forEach((I,i)=>{for(let y=0;y<IR;y++)for(let x=0;x<IC_;x++){if(!owned(i,x,y))continue;const occ=occupant(i,x,y,mode.tid);
+    s+=`<rect x="${isoX(i)+x*CW+2}" y="${isoY(i)+y*CH+2}" width="${CW-4}" height="${CH-4}" rx="7" fill="${occ?'rgba(229,72,77,.25)':'rgba(255,255,255,.22)'}" stroke="rgba(255,255,255,.75)" stroke-width="1.5" stroke-dasharray="5 4"/>`}});
+  const g=mode.ghost;if(g){const ok=canPlace(g.is,g.x,g.y,mode.w,mode.h,mode.tid);
+    s+=`<rect x="${isoX(g.is)+g.x*CW}" y="${isoY(g.is)+g.y*CH}" width="${mode.w*CW}" height="${mode.h*CH}" rx="10" fill="${ok?'rgba(54,178,74,.45)':'rgba(229,72,77,.5)'}" stroke="${ok?'#d6ffcf':'#ffd0d0'}" stroke-width="3"/>`;
+    const fake=mode.kind==='move'?tileById(mode.tid):itemTile(mode.item);const{x,y,s:sc}=tileXY(fake,g);s+=`<g class="ghost" transform="translate(${x} ${y}) scale(${sc})">${bldBody(fake)}</g>`}
+  return s+'</g>'}
+function itemTile(item){const[type,arg]=item.split(':');return type==='habitat'?{type,el:arg,lvl:1,id:-1}:type==='deco'?{type,kind:arg,id:-1}:{type,id:-1}}
+function renderWorld(){
+  let s=`<defs><linearGradient id="gtop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#86da5f"/><stop offset="1" stop-color="#5fbe40"/></linearGradient><linearGradient id="rock" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9b6b43"/><stop offset="1" stop-color="#4f331f"/></linearGradient><radialGradient id="glow"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>`;
+  s+=`<rect x="-2000" y="-2000" width="7000" height="6000" fill="transparent"/>`;
+  [[200,250,1.4,140],[900,120,1,170],[2000,180,1.2,150],[2600,700,1.1,190],[300,1400,1.3,160],[2300,1500,1,200],[1200,1880,1.5,180],[2700,1800,.9,170]].forEach(([x,y,sc,dur],i)=>{s+=`<g class="cloud" style="animation-duration:${dur}s;animation-delay:-${i*23}s" pointer-events="none"><g transform="translate(${x-1500} ${y}) scale(${sc})" opacity=".8"><ellipse cx="0" cy="0" rx="70" ry="22" fill="#fff"/><ellipse cx="-26" cy="-14" rx="32" ry="22" fill="#fff"/><ellipse cx="22" cy="-20" rx="38" ry="28" fill="#fff"/></g></g>`});
+  [[180,560],[2860,1300],[900,1900],[2100,300]].forEach(([x,y],i)=>{s+=`<g class="float" style="animation-delay:-${i*1.3}s" pointer-events="none"><path d="M${x-30} ${y}l60-6 10 12-36 40z" fill="url(#rock)"/><path d="M${x-30} ${y}l60-6 10 12-70 0z" fill="#6cc24a"/></g>`});
+  s+=ISLANDS.map((I,i)=>underside(I.cx,I.cy+24,400,222,i)).join('');
+  const H=ISLANDS[0];
+  s+=bridge(H.cx-400,H.cy,ISLANDS[1].cx+400,ISLANDS[1].cy)+bridge(H.cx+400,H.cy,ISLANDS[2].cx-400,ISLANDS[2].cy)+bridge(H.cx,H.cy-222,ISLANDS[3].cx,ISLANDS[3].cy+232)+bridge(H.cx,H.cy+240,ISLANDS[4].cx,ISLANDS[4].cy-222);
+  s+=ISLANDS.map((I,i)=>islandTop(i)+grassBits(i)).join('');
+  s+=arenaIsland();
+  ISLANDS.forEach((I,i)=>{for(let p=0;p<4;p++)if(!S.land[i][p])s+=lockedPlot(i,p);if(i>0)s+=islandSign(i)});
+  const blds=[...S.tiles].sort((a,b)=>tileXY(a).y-tileXY(b).y).map(buildingSVG).join('');
+  s+=`<g id="blds">${blds}</g>`;
+  s+=`<g id="bubbles">${bubbleLayer()}</g>`;
+  camEl.innerHTML=s;applyCam()}
+function bubbleLayer(){let s='';
+  for(const t of S.tiles){const{x:cx,y:by,s:sc}=tileXY(t);const cy=by-(t.type==='deco'?70:84)*sc;let icon='',act='',prog=null,vb='0 0 32 32';
+    if(t.type==='habitat'){if(goldOf(t)>=10){icon=IC.gold;act='collect'}}
+    else if(t.type==='farm'&&t.crop){if(t.end<=now()){icon=IC.food;act='harvest'}else{const c=CROPS.find(c=>c.id===t.crop);prog=1-(t.end-now())/c.t}}
+    else if(t.type==='hatchery'&&S.eggs.some(e=>e.end<=now())){icon=eggSVG(S.eggs.find(e=>e.end<=now()).did);vb='0 0 110 100';act='open'}
+    else if(t.type==='tree'&&S.breed){if(S.breed.end<=now()){icon=eggSVG(S.breed.did);vb='0 0 110 100';act='open'}else prog=1-(S.breed.end-now())/S.breed.dur}
+    if(icon){const full=t.type==='habitat'&&goldOf(t)>=habGoldCap(t);
+      s+=`<g transform="translate(${cx} ${cy})"><g class="bld pulse" data-tid="${t.id}" data-act="${act}"><path d="M0 20l-7-9h14z" fill="#fff"/><circle r="17" fill="#fff" stroke="${full?'#e5484d':'#17324d'}" stroke-width="3"/><svg x="-12" y="-12" width="24" height="24" viewBox="${vb}">${inner(icon)}</svg></g></g>`}
+    else if(prog!==null){const a=Math.max(0,Math.min(1,prog))*Math.PI*2,x=Math.sin(a)*13,y=-Math.cos(a)*13;
+      s+=`<g transform="translate(${cx} ${cy+8})" pointer-events="none"><circle r="16" fill="#17324d" opacity=".78"/><path d="M0 0L0-13A13 13 0 ${a>Math.PI?1:0} 1 ${x.toFixed(1)} ${y.toFixed(1)}Z" fill="#9cf06b"/><circle r="5" fill="#17324d"/></g>`}}
+  if(mode)s+=gridLayer();
+  return s}
+function renderBubbles(){const b=$('#bubbles');if(b)b.innerHTML=bubbleLayer()}
+
+/* ================= pointer: drag / pinch / wheel / tap ================= */
+const ptrs=new Map();let drag=null,pinch=null,moved=false,downTarget=null,downBtn=0;
+svgEl.addEventListener('pointerdown',e=>{svgEl.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===1){drag={x:e.clientX,y:e.clientY,cx:cam.x,cy:cam.y};moved=false;downTarget=e.target;downBtn=e.button}
+  else if(ptrs.size===2){const[a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),z:cam.z,w:toWorld((a.x+b.x)/2,(a.y+b.y)/2)};moved=true}});
+svgEl.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pinch&&ptrs.size>=2){const[a,b]=[...ptrs.values()],d=Math.hypot(a.x-b.x,a.y-b.y);cam.z=pinch.z*d/pinch.d;clampCam();const m=toWorld((a.x+b.x)/2,(a.y+b.y)/2);cam.x+=pinch.w.x-m.x;cam.y+=pinch.w.y-m.y;applyCam();return}
+  if(drag){const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(!moved&&Math.hypot(dx,dy)>7){moved=true;svgEl.classList.add('dragging')}if(moved){cam.x=drag.cx-dx/cam.z;cam.y=drag.cy-dy/cam.z;applyCam()}}});
+function endPtr(e){if(!ptrs.has(e.pointerId))return;ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;
+  if(ptrs.size===0){svgEl.classList.remove('dragging');if(!moved&&downBtn!==2&&e.type==='pointerup')tap(downTarget,e);drag=null}
+  else if(ptrs.size===1){const p=[...ptrs.values()][0];drag={x:p.x,y:p.y,cx:cam.x,cy:cam.y}}}
+svgEl.addEventListener('pointerup',endPtr);svgEl.addEventListener('pointercancel',endPtr);
+svgEl.addEventListener('contextmenu',e=>e.preventDefault());
+svgEl.addEventListener('wheel',e=>{e.preventDefault();const w=toWorld(e.clientX,e.clientY);cam.z*=Math.exp(-e.deltaY*.0015);clampCam();const m=toWorld(e.clientX,e.clientY);cam.x+=w.x-m.x;cam.y+=w.y-m.y;applyCam()},{passive:false});
+function cellAt(wx,wy){for(let i=0;i<ISLANDS.length;i++){const x=Math.floor((wx-isoX(i))/CW),y=Math.floor((wy-isoY(i))/CH);if(x>=0&&y>=0&&x<IC_&&y<IR)return{is:i,x,y}}return null}
+function tap(target,e){
+  if(mode){const w=toWorld(e.clientX,e.clientY),c=cellAt(w.x,w.y);if(!c)return;
+    mode.ghost={is:c.is,x:Math.max(0,Math.min(IC_-mode.w,c.x-Math.floor((mode.w-1)/2))),y:Math.max(0,Math.min(IR-mode.h,c.y-Math.floor((mode.h-1)/2)))};updateBanner();renderBubbles();return}
+  const el=target&&target.closest?target:null;if(!el)return;
+  const act=el.closest('[data-act]');if(act&&A[act.dataset.act]){A[act.dataset.act](act);return}
+  const b=el.closest('.bld');if(b)return openTile(tileById(+b.dataset.tid));
+  const pl=el.closest('[data-plot]');if(pl){const[i,p]=pl.dataset.plot.split(':').map(Number);return show(landPanel,i,p)}
+  if(el.closest('[data-arena]'))return show(arenaPanel);
+}
+
+/* ================= HUD & docks ================= */
+function renderHud(){const need=levelXP(S.level);
+  $('#hud').innerHTML=`<div class="lvl" title="Player level"><div class="badge">${S.level}</div><div><div style="font:800 12px Nunito,sans-serif">${fmt(S.xp)} / ${fmt(need)} XP</div><div class="xpbar"><i style="width:${Math.min(100,S.xp/need*100)}%"></i></div></div></div>
+  <div class="chip">${IC.gold}<b>${fmt(S.gold)}</b><button class="plus" data-open="shop:habitats" aria-label="Shop">+</button></div>
+  <div class="chip">${IC.food}<b>${fmt(S.food)}</b><button class="plus" data-open="farms" aria-label="Farms">+</button></div>
+  <div class="chip">${IC.gem}<b>${fmt(S.gems)}</b></div>
+  <div class="sp"></div><span id="saveDot">${esc(saveState||'')}</span>
+  <button class="iconbtn" data-open="settings" aria-label="Settings">${IC.cog}</button>`}
+function renderDocks(){
+  const dk=(id,label,bg,icon)=>`<button class="dk" data-open="${id}" data-dk="${id.split(':')[0]}"><span class="ic" style="background:${bg}">${icon}</span><span>${label}</span></button>`;
+  $('#dock').innerHTML=dk('goals','Goals','#ff8a1f',IC.goals)+dk('dragons','Dragons','#3fae4a',IC.dragons)+dk('book','Book','#9b44e0',IC.book)+dk('arena','Arena','#e5484d',IC.sword)+dk('shop:habitats','Shop','#2f86de',IC.shop);
+  $('#leftDock').innerHTML=dk('collectAll','Collect','#ffb400',IC.coinsAll)+dk('home','Home','#17324d',IC.home);
+  checkGoalsDot();tutRender()}
+function renderAll(){renderHud();renderDocks();renderWorld()}
+
+/* ================= toasts & modal ================= */
+function toast(msg,icon){const t=document.createElement('div');t.className='toast';t.innerHTML=(icon&&IC[icon]?IC[icon]:'')+`<span>${esc(msg)}</span>`;$('#toasts').appendChild(t);setTimeout(()=>t.remove(),2800)}
+let view=null;
+function openModal(title,body,opt){opt=opt||{};const m=$('#modal');m.className='modal'+(opt.cls?' '+opt.cls:'');
+  m.innerHTML=opt.raw?body:`<div class="mhead" style="background:${opt.color||'var(--blue)'}"><h2>${title}</h2><button class="x" data-close aria-label="Close">×</button></div><div class="mbody">${body}</div>`;
+  $('#modalBg').classList.add('on');tutRender()}
+function closeModal(){$('#modalBg').classList.remove('on');view=null;battle=null;tutRender()}
+function show(fn,...args){const sc=$('#modal .mbody');const keep=view&&view.fn===fn&&sc?sc.scrollTop:0;view={fn,args};fn(...args);const nb=$('#modal .mbody');if(nb&&keep)nb.scrollTop=keep}
+function refresh(){if(view&&!battle)show(view.fn,...view.args)}
+
+/* ================= panels ================= */
+function dragonCard(d,extra){const D=DR(d.did);return`<div class="item"><div class="art">${dragonSVG(d.did,stageOf(d.lvl))}</div><div class="grow"><h3>${esc(D.name)} <span class="muted">Lv ${d.lvl}</span></h3><div class="els" style="justify-content:flex-start">${D.els.map(elChip).join('')} ${rarBadge(D.r)}</div>${extra||''}</div></div>`}
+function habitatPanel(tid){const t=tileById(tid);if(!t)return closeModal();const e=EL[t.el],ds=dragonsIn(t.id),g=goldOf(t),cap=habGoldCap(t);
+  let b=`<div class="row" style="margin-bottom:10px"><div style="flex:1;min-width:200px"><div class="muted">Gold stored · ${fmt(habRate(t)*60)}/hour</div><div class="bar gold"><i style="width:${g/cap*100}%"></i></div><div class="muted">${fmt(g)} / ${fmt(cap)}</div></div><button class="btn gold" data-act="collect" data-tid="${t.id}" ${g<1?'disabled':''}>${IC.gold} Collect</button></div>`;
+  b+=`<div class="muted" style="margin-bottom:6px">Dragons ${ds.length} / ${habCap(t)}. Dragons with the ${e.n} element can live here.</div><div class="list">`;
+  if(!ds.length)b+=`<div class="empty">No dragons here yet. Buy an egg in the Shop, then hatch it.</div>`;
+  ds.forEach(d=>{const D=DR(d.did),fc=feedCost(D,d.lvl),max=d.lvl>=MAXLV;
+    b+=dragonCard(d,`<div class="row" style="margin-top:6px"><div class="pips">${[0,1,2,3].map(i=>`<i class="${i<d.feeds?'on':''}"></i>`).join('')}</div><button class="btn sm" data-act="feed" data-uid="${d.uid}" ${max?'disabled':''}>${max?'Max level':`Feed ${price('food',fc)}`}</button><button class="btn sm blue" data-act="dinfo" data-uid="${d.uid}">Info</button></div>`)});
+  b+=`</div>`;
+  const up=t.lvl<3,upc=1500*t.lvl*t.lvl;
+  b+=`<div class="row" style="margin-top:12px;justify-content:flex-end">${up?`<button class="btn blue" data-act="habup" data-tid="${t.id}">Upgrade (+1 space) ${price('gold',upc)}</button>`:'<span class="muted">Fully upgraded</span>'}<button class="btn grey" data-act="move" data-tid="${t.id}">Move</button>${!ds.length?`<button class="btn red" data-act="sellb" data-tid="${t.id}">Sell</button>`:''}</div>`;
+  openModal(`${e.n} Habitat · Level ${t.lvl}`,b,{color:shade(e.c,-.2)})}
+function dragonInfo(uid){const d=S.dragons.find(x=>x.uid===uid);if(!d)return closeModal();const D=DR(d.did),st=stageOf(d.lvl),hab=tileById(d.hab);
+  const mv=movesOf(D).map(m=>`<div class="stat"><span style="display:flex;gap:6px;align-items:center">${elIcon(m.el,18)} ${m.n}${d.lvl<m.u?` <span class="muted">(Lv ${m.u})</span>`:''}</span><b>${m.p}</b></div>`).join('');
+  const strong=[...new Set(D.els.flatMap(e=>e==='aether'?['all']:STRONG[e]))];
+  const b=`<div class="split"><div><div class="bigart">${dragonSVG(d.did,st)}</div><div class="els" style="margin-top:8px">${D.els.map(elChip).join('')} ${rarBadge(D.r)}</div></div><div>
+  <div class="stat"><span>Level</span><b>${d.lvl} · ${STAGES[st]}</b></div><div class="stat"><span>Body type</span><b>${ARCH_N[archOf(d.did)]}</b></div><div class="stat"><span>Health</span><b>${hpOf(D,d.lvl)}</b></div><div class="stat"><span>Attack</span><b>${atkOf(D,d.lvl)}</b></div><div class="stat"><span>Gold</span><b>${fmt(rateOf(D,d.lvl)*60)}/hour</b></div>
+  <div class="stat"><span>Hits hard on</span><span class="els">${strong.map(e=>e==='all'?'<span class="muted">Every element</span>':elChip(e)).join('')}</span></div>
+  <div class="stat"><span>Weak to</span><span class="els">${D.els[0]==='aether'?'<span class="muted">Nothing</span>':weakTo(D.els[0]).map(elChip).join('')}</span></div>
+  <h3 style="margin:10px 0 2px">Attacks</h3>${mv}
+  <div class="row" style="margin-top:12px"><button class="btn grey" data-act="rehome" data-uid="${d.uid}">Move habitat</button><button class="btn red" data-act="selld" data-uid="${d.uid}">Sell ${price('gold',RAR[D.r].sell*d.lvl)}</button>${hab?`<button class="btn blue" data-open-hab="${hab.id}">Go to habitat</button>`:''}</div></div></div>`;
+  openModal(esc(D.name),b,{color:RAR[D.r].col})}
+function rehomePanel(uid){const d=S.dragons.find(x=>x.uid===uid);const hs=compatHabs(d.did,d.hab);
+  const b=hs.length?`<div class="list">${hs.map(t=>`<div class="item"><div class="grow"><h3>${EL[t.el].n} Habitat</h3><div class="muted">${ISLANDS[t.is].name} · ${dragonsIn(t.id).length}/${habCap(t)} dragons</div></div><button class="btn" data-act="rehomeTo" data-uid="${uid}" data-tid="${t.id}">Move here</button></div>`).join('')}</div>`:`<div class="empty">No other habitat with space fits this dragon. Build a ${DR(d.did).els.map(e=>EL[e].n).join(' or ')} habitat.</div>`;
+  openModal('Move to which habitat?',b)}
+function farmPanel(tid){const t=tileById(tid);let b='';
+  if(t.crop){const c=CROPS.find(c=>c.id===t.crop),left=t.end-now();
+    if(left<=0)b=`<div class="empty">Your ${c.n} is ready!</div><div class="row" style="justify-content:center"><button class="btn" data-act="harvest" data-tid="${t.id}">Harvest ${price('food',c.food)}</button></div>`;
+    else{const gc=Math.max(1,Math.ceil(left/120000));b=`<div class="item"><div class="grow"><h3>Growing ${c.n}</h3><div class="bar" style="margin:6px 0"><i data-pstart="${t.end-c.t}" data-pend="${t.end}" style="width:${(1-left/c.t)*100}%"></i></div><span class="timer" data-end="${t.end}">${fmtT(left)}</span> left</div><button class="btn gem" data-act="rushfarm" data-tid="${t.id}">Finish ${price('gem',gc)}</button></div>`}}
+  else b=`<div class="muted" style="margin-bottom:8px">Pick a crop to plant. Food levels up your dragons.</div><div class="list">${CROPS.map(c=>{const lock=S.level<c.lv;return`<div class="item${lock?' card lock':''}"><svg viewBox="0 0 40 40" width="46" height="46"><circle cx="20" cy="22" r="14" fill="${c.c}"/><path d="M20 8c-4-4-8 0-6 2" stroke="#2f8f3e" stroke-width="3" fill="none"/><circle cx="15" cy="17" r="3" fill="#fff" opacity=".5"/></svg><div class="grow"><h3>${c.n}</h3><div class="muted">${fmtT(c.t)} · ${price('food',c.food)}</div></div>${lock?`<span class="muted">Level ${c.lv}</span>`:`<button class="btn" data-act="plant" data-tid="${t.id}" data-crop="${c.id}">Plant ${price('gold',c.cost)}</button>`}</div>`}).join('')}</div>`;
+  b+=`<div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn grey" data-act="move" data-tid="${t.id}">Move</button>${!t.crop?`<button class="btn red" data-act="sellb" data-tid="${t.id}">Sell</button>`:''}</div>`;
+  openModal('Farm',b,{color:'#8a5a36'})}
+function farmsOverview(){const fs=S.tiles.filter(t=>t.type==='farm');openModal('Your farms',fs.length?`<div class="list">${fs.map((t,i)=>{const c=t.crop&&CROPS.find(c=>c.id===t.crop);return`<div class="item"><div class="grow"><h3>Farm ${i+1}</h3><div class="muted">${c?(t.end<=now()?c.n+' ready':`${c.n} · <span class="timer" data-end="${t.end}">${fmtT(t.end-now())}</span>`):'Empty'}</div></div><button class="btn" data-open-farm="${t.id}">Open</button></div>`}).join('')}</div>`:'<div class="empty">No farms yet.</div>'+`<div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn blue" data-open="shop:farms">Build a farm</button></div>`,{color:'#8a5a36'})}
+function hatcheryPanel(){let b=`<div class="muted" style="margin-bottom:8px">Eggs ${S.eggs.length} / ${S.hatchCap}. A hatched dragon needs a habitat of one of its elements with free space.</div><div class="list">`;
+  if(!S.eggs.length)b+=`<div class="empty">No eggs. Breed dragons at the Breeding Tree or buy eggs in the Shop.</div>`;
+  S.eggs.forEach(e=>{const D=DR(e.did),left=e.end-now(),known=S.book[e.did];
+    b+=`<div class="item"><div class="art">${eggSVG(e.did)}</div><div class="grow"><h3>${known?esc(D.name):'Mystery egg'}</h3><div class="els" style="justify-content:flex-start">${D.els.map(elChip).join('')} ${rarBadge(D.r)}</div>${left>0?`<div class="muted" style="margin-top:4px">Hatches in <span class="timer" data-end="${e.end}">${fmtT(left)}</span></div>`:''}</div>
+    ${left>0?`<button class="btn gem" data-act="rushegg" data-uid="${e.uid}">Hatch now ${price('gem',Math.max(1,Math.ceil(left/120000)))}</button>`:`<button class="btn" data-act="hatch" data-uid="${e.uid}">Hatch!</button>`}<button class="btn sm red" data-act="sellegg" data-uid="${e.uid}">Sell</button></div>`});
+  b+=`</div>`;
+  if(S.hatchCap<6)b+=`<div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn blue" data-act="hatchup">Add egg slot ${price('gold',2000*(S.hatchCap-2))}</button><button class="btn grey" data-act="move" data-tid="${S.tiles.find(t=>t.type==='hatchery').id}">Move</button></div>`;
+  openModal('Hatchery',b,{color:'#5d6d7e'})}
+function hatchPick(uid){const e=S.eggs.find(x=>x.uid===uid),hs=compatHabs(e.did);
+  const b=hs.length?`<div class="list">${hs.map(t=>`<div class="item"><div class="grow"><h3>${EL[t.el].n} Habitat</h3><div class="muted">${ISLANDS[t.is].name} · ${dragonsIn(t.id).length}/${habCap(t)} dragons</div></div><button class="btn" data-act="hatchTo" data-uid="${uid}" data-tid="${t.id}">Place here</button></div>`).join('')}</div>`:
+  `<div class="empty">You need a ${DR(e.did).els.map(x=>EL[x].n).join(' or ')} habitat with free space.</div><div class="row" style="justify-content:center"><button class="btn blue" data-open="shop:habitats">Go to Shop</button></div>`;
+  openModal('Choose a habitat',b)}
+let breedSel=[];
+function possibleChildren(a,b){const A=DR(a),B=DR(b),u=new Set([...A.els,...B.els]);const hiR=[A.r,B.r].every(r=>r!=='C');const anyL=A.r==='L'||B.r==='L';
+  return DRAGONS.filter(d=>d.id<RELEASED&&(d.r==='L'?(hiR&&u.has(d.els[1]))||(anyL&&d.els.every(e=>u.has(e))):d.els.every(e=>u.has(e))))}
+function breedPanel(){let b='';
+  if(S.breed){const left=S.breed.end-now();
+    b=left>0?`<div class="item"><div class="art">${eggSVG(S.breed.did)}</div><div class="grow"><h3>Breeding…</h3><div class="bar" style="margin:6px 0"><i data-pstart="${S.breed.end-S.breed.dur}" data-pend="${S.breed.end}" style="width:${(1-left/S.breed.dur)*100}%"></i></div><span class="timer" data-end="${S.breed.end}">${fmtT(left)}</span> left</div><button class="btn gem" data-act="rushbreed">Finish ${price('gem',Math.max(1,Math.ceil(left/120000)))}</button></div>`
+    :`<div class="item"><div class="art">${eggSVG(S.breed.did)}</div><div class="grow"><h3>An egg is ready!</h3><div class="muted">Send it to the Hatchery.</div></div><button class="btn" data-act="takeegg">To Hatchery</button></div>`;
+    return openModal('Breeding Tree',b,{color:'#e0568a'})}
+  const ok=S.dragons.filter(d=>d.lvl>=4);
+  b=`<div class="muted" style="margin-bottom:8px">Pick two dragons at level 4 or higher. The baby can take any mix of its parents' elements.</div>`;
+  if(ok.length<2)b+=`<div class="empty">You need two dragons at level 4+. Feed your dragons to level them up.</div>`;
+  else{b+=`<div class="grid">${ok.map(d=>{const D=DR(d.did),i=breedSel.indexOf(d.uid);return`<div class="card click${i>=0?' sel':''}" data-act="bsel" data-uid="${d.uid}"><div class="art">${dragonSVG(d.did,stageOf(d.lvl))}</div><h3>${esc(D.name)}</h3><div class="els">${D.els.map(e=>elIcon(e,18)).join('')}</div><small>Lv ${d.lvl}</small>${i>=0?`<span class="rar" style="background:var(--green);position:absolute;top:6px;left:6px">${i+1}</span>`:''}</div>`}).join('')}</div>`;
+    if(breedSel.length===2){const[a,c]=breedSel.map(u=>S.dragons.find(d=>d.uid===u));const kids=possibleChildren(a.did,c.did);
+      b+=`<div class="note" style="margin-top:12px">Possible babies: ${kids.length}. ${kids.filter(k=>S.book[k.id]).length} already in your Book.<div class="els" style="justify-content:flex-start;margin-top:4px">${['C','R','E','L'].filter(r=>kids.some(k=>k.r===r)).map(rarBadge).join(' ')}</div></div><div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn" data-act="breed">Breed!</button></div>`}}
+  b+=`<div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn grey" data-act="move" data-tid="${S.tiles.find(t=>t.type==='tree').id}">Move tree</button></div>`;
+  openModal('Breeding Tree',b,{color:'#e0568a'})}
+function shopPanel(tab){tab=tab||'habitats';const tabs=[['habitats','Habitats'],['farms','Farms'],['eggs','Eggs'],['decor','Decorations']];
+  let b=`<div class="tabs">${tabs.map(([k,n])=>`<button class="tab${k===tab?' on':''}" data-open="shop:${k}" data-tab="${k}">${n}</button>`).join('')}</div><div class="grid">`;
+  if(tab==='habitats')[...BASE,'aether'].forEach(el=>{const c=habCost(el),lock=S.level<HAB_LV[el];
+    b+=`<div class="card${lock?' lock':''}"><div class="art"><svg viewBox="-60 -90 120 110">${habBase(el)+habFeature(el)}</svg></div><h3>${EL[el].n} Habitat</h3>${lock?`<small>Unlocks at level ${HAB_LV[el]}</small>`:`<button class="btn sm" data-act="buy" data-item="habitat:${el}">${price(c.cur,c.v)}</button>`}</div>`});
+  if(tab==='farms'){const c=farmCost();b+=`<div class="card"><div class="art"><svg viewBox="-60 -60 120 80"><rect x="-44" y="-22" width="88" height="34" rx="10" fill="#8a5a36"/><rect x="-40" y="-20" width="80" height="28" rx="8" fill="#a8703f"/><circle cx="-20" cy="-10" r="6" fill="#3fae4a"/><circle cx="8" cy="-8" r="6" fill="#3fae4a"/><circle cx="26" cy="-12" r="6" fill="#3fae4a"/></svg></div><h3>Farm</h3><small>You have ${countType('farm')}</small><button class="btn sm" data-act="buy" data-item="farm">${price('gold',c)}</button></div>`}
+  if(tab==='eggs')BASE.forEach((el,i)=>{const lock=S.level<HAB_LV[el],c=eggCost(i);
+    b+=`<div class="card${lock?' lock':''}"><div class="art">${eggSVG(i)}</div><h3>${esc(DR(i).name)}</h3><div class="els">${elChip(el)}</div>${lock?`<small>Unlocks at level ${HAB_LV[el]}</small>`:`<button class="btn sm" data-act="buyegg" data-did="${i}">${price('gold',c)}</button>`}</div>`});
+  if(tab==='decor')DECOS.forEach(dc=>{const lock=S.level<dc.lv;b+=`<div class="card${lock?' lock':''}"><div class="art"><svg viewBox="-50 -84 100 92">${decoSVG(dc.id)}</svg></div><h3>${dc.n}</h3><small>+${dc.xp} XP</small>${lock?`<small>Unlocks at level ${dc.lv}</small>`:`<button class="btn sm" data-act="buy" data-item="deco:${dc.id}">${price(dc.cur,dc.cost)}</button>`}</div>`});
+  b+=`</div>`;openModal('Shop',b,{color:'#2f86de'})}
+function landPanel(i,p){const I=ISLANDS[i],lock=S.level<I.lv,left=S.land[i].filter(x=>!x).length,wp=wholePrice(i),full=I.plots.reduce((s,v,k)=>s+(S.land[i][k]?0:v),0);
+  let b=`<div class="muted" style="margin-bottom:10px">Clear this land to build more habitats and farms. Buy one section, or the whole island at a discount.</div>`;
+  if(lock)b+=`<div class="note">${I.name} opens at player level ${I.lv}. You're level ${S.level}.</div>`;
+  else{b+=`<div class="list"><div class="item"><div class="grow"><h3>This section</h3><div class="muted">${ISLANDS[i].name}, section ${p+1} of 4</div></div><button class="btn" data-act="buyland" data-i="${i}" data-p="${p}">Buy ${price('gold',I.plots[p])}</button></div>`;
+    if(left>1)b+=`<div class="item"><div class="grow"><h3>Whole island</h3><div class="muted">All ${left} remaining sections · save ${fmt(full-wp)} gold</div></div><button class="btn gold" data-act="buyisland" data-i="${i}">Buy ${price('gold',wp)}</button></div>`;
+    b+=`</div>`}
+  openModal(I.name,b,{color:'#3f7a2c'})}
+let dragonsSort='level';
+function dragonsPanel(){const ds=[...S.dragons].sort(dragonsSort==='level'?(a,b)=>b.lvl-a.lvl:(a,b)=>['L','E','R','C'].indexOf(DR(a.did).r)-['L','E','R','C'].indexOf(DR(b.did).r));
+  let b=`<div class="tabs"><button class="tab${dragonsSort==='level'?' on':''}" data-act="dsort" data-s="level">By level</button><button class="tab${dragonsSort==='rarity'?' on':''}" data-act="dsort" data-s="rarity">By rarity</button></div>`;
+  b+=ds.length?`<div class="grid">${ds.map(d=>{const D=DR(d.did);return`<div class="card click" data-act="dinfo" data-uid="${d.uid}"><div class="art">${dragonSVG(d.did,stageOf(d.lvl))}</div><h3>${esc(D.name)}</h3><div class="els">${D.els.map(e=>elIcon(e,18)).join('')}</div><small>Lv ${d.lvl} · ${RAR[D.r].n}</small></div>`}).join('')}</div>`:'<div class="empty">No dragons yet. Buy an egg in the Shop.</div>';
+  openModal(`Your dragons (${S.dragons.length})`,b,{color:'#3fae4a'})}
+let bookTab='all';
+function bookPanel(){const list=DRAGONS.filter(d=>d.id<RELEASED&&(bookTab==='all'||d.r===bookTab));const have=Object.keys(S.book).length;
+  let b=`<div class="row" style="margin-bottom:10px"><div style="flex:1;min-width:180px"><div class="muted">Collected ${have} / ${RELEASED}</div><div class="bar"><i style="width:${have/RELEASED*100}%"></i></div></div></div>`;
+  b+=`<div class="tabs">${[['all','All'],['C','Common'],['R','Rare'],['E','Epic'],['L','Legendary']].map(([k,n])=>`<button class="tab${bookTab===k?' on':''}" data-act="btab" data-t="${k}">${n} ${k==='all'?'':DRAGONS.filter(d=>d.id<RELEASED&&d.r===k&&S.book[d.id]).length+'/'+DRAGONS.filter(d=>d.id<RELEASED&&d.r===k).length}</button>`).join('')}</div>`;
+  b+=`<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(118px,1fr))">${list.map(d=>{const k=S.book[d.id];return`<div class="card click" data-act="binfo" data-did="${d.id}"><div class="art">${dragonSVG(d.id,2,{sil:!k})}</div><h3 style="font-size:14px">${k?esc(d.name):'#'+(d.id+1)+' ???'}</h3><div class="els">${d.els.map(e=>elIcon(e,16)).join('')}</div></div>`}).join('')}</div>`;
+  openModal('Book of Dragons',b,{color:'#9b44e0'})}
+function bookInfo(did){const d=DR(did),k=S.book[did];
+  const hint=d.r==='C'?'Buy its egg in the Shop, or breed two dragons that share its element.':d.r==='L'?`Breed two Rare-or-better dragons where one carries ${EL[d.els[1]].n}. Very low chance.`:`Breed parents that together carry ${d.els.map(e=>EL[e].n).join(' + ')}.`;
+  openModal(k?esc(d.name):'Undiscovered dragon',`<div class="split"><div class="bigart">${dragonSVG(did,2,{sil:!k})}</div><div><div class="els" style="justify-content:flex-start">${d.els.map(elChip).join('')} ${rarBadge(d.r)}</div><div class="stat"><span>Book number</span><b>#${did+1}</b></div><div class="stat"><span>Body type</span><b>${ARCH_N[archOf(did)]}</b></div><div class="stat"><span>Health at Lv 1</span><b>${hpOf(d,1)}</b></div><div class="stat"><span>Gold at Lv 1</span><b>${fmt(rateOf(d,1)*60)}/hour</b></div><div class="stat"><span>Breed time</span><b>${fmtT(RAR[d.r].bt*60e3)}</b></div><p class="note" style="margin-top:10px">How to get it: ${hint}</p><button class="btn blue" data-open="book">Back to Book</button></div></div>`,{color:RAR[d.r].col})}
+
+/* ================= goals ================= */
+const GOALS=[
+ {id:'feed1',n:'Feed a dragon',p:s=>s.stats.feeds>=1,r:{gold:150}},
+ {id:'harv3',n:'Harvest 3 crops',p:s=>s.stats.harvests>=3,r:{gold:300}},
+ {id:'lv4',n:'Raise a dragon to level 4',p:s=>s.dragons.some(d=>d.lvl>=4),r:{gems:5}},
+ {id:'two',n:'Own 2 dragons',p:s=>s.dragons.length>=2,r:{gold:500}},
+ {id:'breed1',n:'Breed two dragons',p:s=>s.stats.breeds>=1,r:{gold:400}},
+ {id:'hatch3',n:'Hatch 3 eggs',p:s=>s.stats.hatches>=3,r:{food:300}},
+ {id:'land1',n:'Buy a new section of land',p:s=>s.land.flat().filter(Boolean).length>=2,r:{gems:5}},
+ {id:'hab3',n:'Own 3 habitats',p:s=>s.tiles.filter(t=>t.type==='habitat').length>=3,r:{gold:600}},
+ {id:'win3',n:'Win 3 arena battles',p:s=>s.stats.wins>=3,r:{gems:10}},
+ {id:'book10',n:'Collect 10 dragons in the Book',p:s=>Object.keys(s.book).length>=10,r:{gold:1500}},
+ {id:'rare',n:'Own a Rare dragon',p:s=>s.dragons.some(d=>DR(d.did).r==='R'),r:{gems:10}},
+ {id:'epic',n:'Own an Epic dragon',p:s=>s.dragons.some(d=>DR(d.did).r==='E'),r:{gems:25}},
+ {id:'island',n:'Open a second island',p:s=>s.land.slice(1).some(l=>l.some(Boolean)),r:{gems:20}},
+ {id:'plv5',n:'Reach player level 5',p:s=>s.level>=5,r:{gold:3000}},
+ {id:'adult',n:'Raise a dragon to Adult (level 7)',p:s=>s.dragons.some(d=>d.lvl>=7),r:{gems:15}},
+ {id:'book25',n:'Collect 25 dragons in the Book',p:s=>Object.keys(s.book).length>=25,r:{gems:50}},
+ {id:'arena10',n:'Clear arena tier 10',p:s=>s.arena.cleared>=10,r:{gems:30}},
+ {id:'legend',n:'Own a Legendary dragon',p:s=>s.dragons.some(d=>DR(d.did).r==='L'),r:{gems:100}}];
+const rewardTxt=r=>Object.entries(r).map(([k,v])=>price(k,v)).join(' ');
+function goalsPanel(){openModal('Goals',`<div class="list">${GOALS.map(g=>{const done=g.p(S),cl=S.goals[g.id];return`<div class="item"><div class="grow"><h3>${g.n}</h3><div class="row muted">Reward ${rewardTxt(g.r)}</div></div>${cl?'<span class="muted">Claimed</span>':done?`<button class="btn gold" data-act="claim" data-g="${g.id}">Claim</button>`:'<span class="muted">In progress</span>'}</div>`}).join('')}</div>`,{color:'#ff8a1f'})}
+function checkGoalsDot(){const has=GOALS.some(g=>!S.goals[g.id]&&g.p(S));const b=document.querySelector('[data-dk="goals"]');if(!b)return;let d=b.querySelector('.dot');if(has&&!d){d=document.createElement('i');d.className='dot';b.appendChild(d)}if(!has&&d)d.remove()}
+
+/* ================= arena & battle ================= */
+const TIERS=20;
+function enemyTeam(t){const r=rng(t*7919+3),size=t<3?1:t<7?2:3,lvl=1+Math.floor(t*.85);
+  const rr=t<4?['C']:t<8?['C','R']:t<13?['R','E']:t<18?['E','E','L']:['E','L'];
+  return Array.from({length:size},()=>{const R=pick(r,rr),pool=DRAGONS.filter(d=>d.id<RELEASED&&d.r===R);return{did:pick(r,pool).id,lvl:Math.max(1,lvl-Math.floor(r()*2))}})}
+let teamSel=[];
+function arenaPanel(){if(!S.dragons.length)return openModal('Arena','<div class="empty">You need at least one dragon to fight. Hatch one first!</div>',{color:'#e5484d'});
+  let b=`<div class="muted" style="margin-bottom:8px">Beat each tier to unlock the next. First clears give gems, and tiers 5, 10, 15 and 20 give an egg.</div><div class="list">`;
+  for(let t=1;t<=TIERS;t++){const lock=t>S.arena.cleared+1,clr=t<=S.arena.cleared,team=enemyTeam(t);
+    b+=`<div class="item"${lock?' style="opacity:.55"':''}><div style="font:800 22px var(--fb);width:46px;text-align:center">${t}</div><div class="row" style="gap:4px">${team.map(e=>`<div style="width:62px;height:52px">${dragonSVG(e.did,stageOf(e.lvl),{sil:lock,flip:true})}</div>`).join('')}</div><div class="grow"><div class="muted">Enemy level ${team[0].lvl}${t%5===0?' · Egg reward':''}</div><div class="row">${price('gold',80*t+50)} ${price('xp',15*t)}</div></div>${lock?'<span class="muted">Locked</span>':`<button class="btn ${clr?'blue':''}" data-act="pickteam" data-t="${t}">${clr?'Replay':'Fight'}</button>`}</div>`}
+  openModal('Arena',b+'</div>',{color:'#e5484d'})}
+function teamPanel(t){const ds=[...S.dragons].sort((a,b)=>hpOf(DR(b.did),b.lvl)*atkOf(DR(b.did),b.lvl)-hpOf(DR(a.did),a.lvl)*atkOf(DR(a.did),a.lvl));const foes=enemyTeam(t);
+  let b=`<div class="note" style="margin-bottom:10px">Enemy: ${foes.map(f=>`${esc(DR(f.did).name)} Lv ${f.lvl} ${DR(f.did).els.map(e=>elIcon(e,16)).join('')}`).join(' · ')}</div><div class="muted" style="margin-bottom:6px">Pick up to 3 dragons (in order).</div>`;
+  b+=`<div class="grid">${ds.map(d=>{const D=DR(d.did),i=teamSel.indexOf(d.uid);return`<div class="card click${i>=0?' sel':''}" data-act="tsel" data-uid="${d.uid}" data-t="${t}"><div class="art">${dragonSVG(d.did,stageOf(d.lvl))}</div><h3>${esc(D.name)}</h3><div class="els">${D.els.map(e=>elIcon(e,18)).join('')}</div><small>Lv ${d.lvl} · HP ${hpOf(D,d.lvl)}</small>${i>=0?`<span class="rar" style="background:var(--green);position:absolute;top:6px;left:6px">${i+1}</span>`:''}</div>`}).join('')}</div>`;
+  b+=`<div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn grey" data-open="arena">Back</button><button class="btn red" data-act="startbattle" data-t="${t}" ${teamSel.length?'':'disabled'}>Battle!</button></div>`;
+  openModal(`Arena tier ${t}`,b,{color:'#e5484d'})}
+let battle=null;
+const mkF=(did,lvl)=>{const D=DR(did);return{did,lvl,max:hpOf(D,lvl),hp:hpOf(D,lvl),atk:atkOf(D,lvl)}};
+function startBattle(t){battle={t,me:teamSel.map(u=>{const d=S.dragons.find(x=>x.uid===u);return mkF(d.did,d.lvl)}),foe:enemyTeam(t).map(e=>mkF(e.did,e.lvl)),mi:0,fi:0,busy:false,log:'Choose an attack!'};view=null;renderBattle()}
+function effTag(m){if(m===0)return'No effect';if(m>=1.5)return'Strong';if(m<1)return'Weak';return''}
+function renderBattle(){const B=battle,me=B.me[B.mi],fo=B.foe[B.fi],MD=DR(me.did),FD=DR(fo.did);
+  const box=(f,D,team,side)=>`<div class="hpbox ${side}"><h3><span>${esc(D.name)}</span><span class="muted">Lv ${f.lvl}</span></h3><div class="els" style="justify-content:flex-start">${D.els.map(e=>elIcon(e,16)).join('')}</div><div class="bar"><i class="${f.hp/f.max<.3?'low':''}" style="width:${f.hp/f.max*100}%"></i></div><div class="row" style="justify-content:space-between"><span class="team">${team.map(x=>`<i class="${x.hp<=0?'dead':''}"></i>`).join('')}</span><span class="muted">${Math.max(0,Math.ceil(f.hp))} / ${f.max}</span></div></div>`;
+  const mv=movesOf(MD).map((m,i)=>{const lock=me.lvl<m.u,mu=mult(m.el,FD.els[0]),tag=effTag(mu);return`<button class="mv" style="background:${shade(EL[m.el].c,-.15)}" data-act="atk" data-i="${i}" ${lock||B.busy?'disabled':''}><b>${m.n}</b><small>${lock?`Unlocks Lv ${m.u}`:`Power ${m.p}${tag?' · '+tag:''}`}</small></button>`}).join('');
+  openModal('',`<div class="mhead" style="background:#e5484d"><h2>Arena tier ${B.t}</h2><button class="x" data-act="flee" aria-label="Leave battle">×</button></div><div class="arena" id="arenaBox">${box(me,MD,B.me,'me')}${box(fo,FD,B.foe,'foe')}<div class="fighter me" id="fMe">${dragonSVG(me.did,stageOf(me.lvl))}</div><div class="fighter foe" id="fFoe">${dragonSVG(fo.did,stageOf(fo.lvl),{flip:true})}</div><div class="blog" id="blog">${esc(B.log)}</div></div><div class="moves">${mv}</div>`,{raw:true,cls:'battle'})}
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+async function doAttack(fromMe,m){const B=battle;if(!B)return;const a=fromMe?B.me[B.mi]:B.foe[B.fi],d=fromMe?B.foe[B.fi]:B.me[B.mi];
+  const mu=mult(m.el,DR(d.did).els[0]),dmg=Math.round(m.p*a.atk/10*mu*(.9+Math.random()*.2));
+  const box=$('#arenaBox');if(!box)return;const fa=$(fromMe?'#fMe':'#fFoe'),fd=$(fromMe?'#fFoe':'#fMe');
+  $('#blog').textContent=`${DR(a.did).name} used ${m.n}!`;fa.classList.add('lunge');
+  const shot=document.createElement('div');shot.className='shot';shot.style.background=EL[m.el].c;shot.style.color=EL[m.el].c;shot.style.left=fromMe?'30%':'64%';box.appendChild(shot);
+  await wait(30);shot.style.left=fromMe?'70%':'26%';await wait(400);shot.remove();fa.classList.remove('lunge');
+  d.hp=Math.max(0,d.hp-dmg);fd.classList.add('hit');
+  const n=document.createElement('div');n.className='dmg'+(mu>=1.5?' eff':'');n.textContent=mu===0?'No effect':'-'+dmg;n.style.left=fromMe?'72%':'18%';n.style.top='38%';box.appendChild(n);setTimeout(()=>n.remove(),1000);
+  const tag=effTag(mu);if(tag)$('#blog').textContent=tag==='Strong'?"It's super strong!":tag==='Weak'?'Not very strong…':'It had no effect!';
+  const hb=box.querySelector(fromMe?'.hpbox.foe .bar i':'.hpbox.me .bar i');if(hb){hb.style.width=(d.hp/d.max*100)+'%';hb.classList.toggle('low',d.hp/d.max<.3)}
+  await wait(500);fd.classList.remove('hit');
+  if(d.hp<=0){fd.classList.add('ko');$('#blog').textContent=`${DR(d.did).name} fainted!`;await wait(700);return true}return false}
+async function playerMove(i){const B=battle;if(!B||B.busy)return;B.busy=true;document.querySelectorAll('.mv').forEach(b=>b.disabled=true);
+  const m=movesOf(DR(B.me[B.mi].did))[i];
+  if(await doAttack(true,m)){B.fi++;if(B.fi>=B.foe.length)return endBattle(true);B.log='A new foe appears!';B.busy=false;renderBattle();return}
+  if(!battle)return;await wait(250);
+  const fo=B.foe[B.fi],me=B.me[B.mi],opts=movesOf(DR(fo.did)).filter(m=>fo.lvl>=m.u);
+  const best=opts.map(m=>({m,s:m.p*mult(m.el,DR(me.did).els[0])*(.8+Math.random()*.4)})).sort((a,b)=>b.s-a.s)[0].m;
+  if(await doAttack(false,best)){B.mi++;if(B.mi>=B.me.length)return endBattle(false);B.log='Go, '+DR(B.me[B.mi].did).name+'!'}
+  else B.log='Your turn!';
+  if(battle){B.busy=false;renderBattle()}}
+function endBattle(win){const t=battle.t;let msg='',extra='';
+  if(win){const g=80*t+50,x=15*t;S.gold+=g;S.stats.wins++;addXP(x);msg=`${price('gold',g)} ${price('xp',x)}`;
+    if(t>S.arena.cleared){S.arena.cleared=t;S.gems+=3;msg+=` ${price('gem',3)}`;
+      if(t%5===0){const R=['R','E','E','L'][t/5-1],pool=DRAGONS.filter(d=>d.id<RELEASED&&d.r===R),did=pool[Math.floor(Math.random()*pool.length)].id;
+        if(S.eggs.length<S.hatchCap){S.eggs.push({uid:S.uid++,did,end:now()+RAR[R].ht*60e3});extra=`<p class="note">A ${RAR[R].n} egg was sent to your Hatchery!</p>`}else{S.gems+=20;extra='<p class="note">Your Hatchery was full, so you got 20 gems instead of an egg.</p>'}}}}
+  else{addXP(5);msg=price('xp',5)}
+  battle=null;commit();
+  openModal(win?'Victory!':'Defeat',`<div style="text-align:center"><h2 style="font-size:34px;margin:4px 0">${win?'You won!':'Your team fainted'}</h2><div class="row" style="justify-content:center">${msg}</div>${extra}${win?'':'<p class="muted">Feed your dragons to raise their level, and pick elements that are strong against the enemy.</p>'}<div class="row" style="justify-content:center;margin-top:12px"><button class="btn" data-open="arena">Back to Arena</button></div></div>`,{color:win?'#36b24a':'#5d6d7e'})}
+
+/* ================= settings ================= */
+let resetArm=false;
+function settingsPanel(){openModal('Settings',`<div class="stat"><span>Player</span><b>${session.user?esc(session.user):'Guest (this device only)'}</b></div><div class="stat"><span>Save</span><b>${esc(saveState||'Saved on this device')}</b></div><div class="stat"><span>Dragons released</span><b>${RELEASED} of 400</b></div><div class="stat"><span>Moving the map</span><b>Drag, right-drag, pinch or scroll</b></div>
+  <div class="row" style="margin-top:14px">${session.token?'<button class="btn blue" data-act="savenow">Save now</button>':''}${S.tut<TUT.length?'<button class="btn grey" data-act="skiptut">Skip tutorial</button>':''}<button class="btn grey" data-act="logout">${session.user?'Log out':'Back to title'}</button><button class="btn red" data-act="reset">${resetArm?'Tap again to erase everything':'Start over'}</button></div>`,{color:'#17324d'})}
+
+/* ================= tutorial (original guide: Pip the owl) ================= */
+const TUT=[
+ {t:"Hoo there! I'm Pip, keeper of these sky islands. Let's get your Haven started. Every dragon needs a home, so first we'll build a habitat.",next:1},
+ {t:'Open the Shop and buy an Ember Habitat. Then tap a spot on your island to place it.',hint:'shop',hintIn:'[data-item="habitat:ember"]',done:s=>s.tiles.some(t=>t.type==='habitat')},
+ {t:"Lovely! Now let's get a dragon to live there. In the Shop's Eggs tab, buy an Emberkin egg.",hint:'shop',hintIn:'[data-did="0"],[data-tab="eggs"]',done:s=>s.eggs.length>0||s.dragons.length>0},
+ {t:'Your egg went to the Hatchery. Tap the Hatchery on your island. When the timer ends, hatch it into your Ember Habitat.',hintIn:'[data-act="hatch"],[data-act="hatchTo"]',done:s=>s.dragons.length>0},
+ {t:'Your first dragon! Dragons grow by eating, so you need food. Buy a Farm in the Shop and place it.',hint:'shop',hintIn:'[data-item="farm"],[data-tab="farms"]',done:s=>s.tiles.some(t=>t.type==='farm')},
+ {t:'Tap your new Farm and plant some Dragonberries. They grow in 30 seconds.',hintIn:'[data-crop="berry"]',done:s=>s.tiles.some(t=>t.type==='farm'&&t.crop)||s.stats.harvests>0},
+ {t:'When the berries are ripe, tap the bubble over the Farm to harvest them.',done:s=>s.stats.harvests>0},
+ {t:'Now tap your Ember Habitat and feed your dragon. Four meals and it levels up, and at level 4 it can breed!',hintIn:'[data-act="feed"]',done:s=>s.stats.feeds>0},
+ {t:"Splendid! The Haven is yours now. Collect gold from habitats, buy land to grow, breed new dragons at the Breeding Tree, and fill your Book. Drag the map to explore the other islands!",next:1,last:1}];
+function tutRender(){const g=$('#guide');document.querySelectorAll('.hint').forEach(e=>e.classList.remove('hint'));
+  if(!S||S.tut>=TUT.length){g.classList.remove('on');return}
+  const st=TUT[S.tut],open=$('#modalBg').classList.contains('on');
+  g.classList.add('on');
+  g.innerHTML=OWL+`<div class="say"><b>Pip</b>${esc(st.t)}${st.next?`<div class="row"><button class="btn sm" data-act="tutnext">${st.last?"Let's go!":'Okay!'}</button></div>`:''}</div>`;
+  if(!open&&st.hint){const d=document.querySelector(`[data-dk="${st.hint}"]`);if(d)d.classList.add('hint')}
+  if(open&&st.hintIn){const el=document.querySelector('#modal '+st.hintIn.split(',').join(',#modal '));if(el)el.classList.add('hint')}}
+function tutCheck(){if(!S||S.tut>=TUT.length)return;let ch=false;while(S.tut<TUT.length&&TUT[S.tut].done&&TUT[S.tut].done(S)){S.tut++;ch=true}if(ch){saveLocal();tutRender()}}
+
+/* ================= actions ================= */
+function startPlace(item){const[type]=item.split(':');const[w,h]=FP[type];const spot=findSpot(w,h);
+  if(!spot){closeModal();return toast('No free space. Buy more land to build!')}
+  mode={kind:'place',item,w,h,ghost:spot};closeModal();updateBanner();renderWorld();focusGhost()}
+function startMove(tid){const t=tileById(tid),[w,h]=fpOf(t);mode={kind:'move',tid,w,h,ghost:{is:t.is,x:t.x,y:t.y}};closeModal();updateBanner();renderWorld();focusGhost()}
+function focusGhost(){const g=mode.ghost,x=isoX(g.is)+(g.x+mode.w/2)*CW,y=isoY(g.is)+(g.y+mode.h/2)*CH;panTo(x,y)}
+function updateBanner(){const ok=mode&&mode.ghost&&canPlace(mode.ghost.is,mode.ghost.x,mode.ghost.y,mode.w,mode.h,mode.tid);
+  $('#bannerText').textContent=ok?'Tap the map to choose a spot':"Can't build there. Pick a green spot";$('#bannerOk').disabled=!ok;$('#bannerOk').textContent=mode&&mode.kind==='move'?'Move here':'Place';$('#banner').classList.add('on')}
+function endMode(){mode=null;$('#banner').classList.remove('on');renderWorld()}
+function confirmPlace(){if(!mode||!mode.ghost)return;const g=mode.ghost;if(!canPlace(g.is,g.x,g.y,mode.w,mode.h,mode.tid))return;
+  if(mode.kind==='move'){const t=tileById(mode.tid);t.is=g.is;t.x=g.x;t.y=g.y;endMode();commit();return}
+  const[type,arg]=mode.item.split(':');
+  if(type==='habitat'){const c=habCost(arg);if(!spend(c.cur,c.v))return endMode();S.tiles.push({id:S.uid++,type:'habitat',el:arg,lvl:1,is:g.is,x:g.x,y:g.y,gold:0,t:now()});addXP(30);toast(`${EL[arg].n} Habitat built!`)}
+  if(type==='farm'){const c=farmCost();if(!spend('gold',c))return endMode();S.tiles.push({id:S.uid++,type:'farm',is:g.is,x:g.x,y:g.y,crop:null,end:0});addXP(15);toast('Farm built!')}
+  if(type==='deco'){const dc=DECOS.find(d=>d.id===arg);if(!spend(dc.cur,dc.cost))return endMode();S.tiles.push({id:S.uid++,type:'deco',kind:arg,is:g.is,x:g.x,y:g.y});addXP(dc.xp)}
+  endMode();commit()}
+function collect(t){const g=Math.floor(goldOf(t));if(g<1)return 0;S.gold+=g;t.gold=goldOf(t)-g;t.t=now();S.stats.collects++;return g}
+const A={
+ collect(e){const t=tileById(+e.dataset.tid),g=collect(t);if(g){toast(`+${fmt(g)} gold`,'gold');commit();refresh()}},
+ harvest(e){const t=tileById(+e.dataset.tid),c=CROPS.find(c=>c.id===t.crop);if(!c)return;S.food+=c.food;S.stats.harvests++;addXP(Math.max(2,Math.round(c.food/20)));t.crop=null;t.end=0;toast(`+${c.food} food`,'food');commit();refresh()},
+ open(e){openTile(tileById(+e.dataset.tid))},
+ feed(e){const d=S.dragons.find(x=>x.uid===+e.dataset.uid),D=DR(d.did),c=feedCost(D,d.lvl);if(d.lvl>=MAXLV)return;if(!spend('food',c))return;
+   const hab=tileById(d.hab);if(hab)bank(hab);d.feeds++;S.stats.feeds++;addXP(Math.max(1,Math.round(c/5)));
+   if(d.feeds>=4){const old=stageOf(d.lvl);d.feeds=0;d.lvl++;toast(`${D.name} reached level ${d.lvl}!`,'xp');if(stageOf(d.lvl)>old)toast(`${D.name} grew into a${stageOf(d.lvl)===2?'n Adult':' Young dragon'}!`)}
+   commit();refresh()},
+ dinfo(e){show(dragonInfo,+e.dataset.uid)},
+ rehome(e){show(rehomePanel,+e.dataset.uid)},
+ rehomeTo(e){const d=S.dragons.find(x=>x.uid===+e.dataset.uid),from=tileById(d.hab),to=tileById(+e.dataset.tid);if(from)bank(from);bank(to);d.hab=to.id;commit();show(habitatPanel,to.id)},
+ selld(e){const d=S.dragons.find(x=>x.uid===+e.dataset.uid);if(S.dragons.length<=1)return toast('You need to keep at least one dragon');const v=RAR[DR(d.did).r].sell*d.lvl;const h=tileById(d.hab);if(h)bank(h);S.dragons=S.dragons.filter(x=>x!==d);S.gold+=v;toast(`Sold for ${fmt(v)} gold`,'gold');commit();h?show(habitatPanel,h.id):closeModal()},
+ habup(e){const t=tileById(+e.dataset.tid),c=1500*t.lvl*t.lvl;if(!spend('gold',c))return;bank(t);t.lvl++;addXP(40);toast('Habitat upgraded!');commit();refresh()},
+ move(e){startMove(+e.dataset.tid)},
+ sellb(e){const t=tileById(+e.dataset.tid);const v=t.type==='habitat'?Math.round((HAB_COST[t.el]||1000)*.3):t.type==='farm'?100:30;S.tiles=S.tiles.filter(x=>x!==t);S.gold+=v;toast(`Sold for ${v} gold`,'gold');closeModal();commit()},
+ plant(e){const t=tileById(+e.dataset.tid),c=CROPS.find(c=>c.id===e.dataset.crop);if(!spend('gold',c.cost))return;t.crop=c.id;t.end=now()+c.t;commit();closeModal()},
+ rushfarm(e){const t=tileById(+e.dataset.tid),gc=Math.max(1,Math.ceil((t.end-now())/120000));if(!spend('gems',gc))return;t.end=now();commit();refresh()},
+ hatch(e){show(hatchPick,+e.dataset.uid)},
+ hatchTo(e){const egg=S.eggs.find(x=>x.uid===+e.dataset.uid),t=tileById(+e.dataset.tid);bank(t);S.eggs=S.eggs.filter(x=>x!==egg);
+   S.dragons.push({uid:S.uid++,did:egg.did,lvl:1,feeds:0,hab:t.id});S.stats.hatches++;addXP(RAR[DR(egg.did).r].xp);discover(egg.did);commit();
+   openModal('It hatched!',`<div style="text-align:center"><div class="bigart" style="max-width:320px;margin:0 auto">${dragonSVG(egg.did,0)}</div><h2 style="margin:8px 0 4px">${esc(DR(egg.did).name)}</h2><div class="els">${DR(egg.did).els.map(elChip).join('')} ${rarBadge(DR(egg.did).r)}</div><div class="row" style="justify-content:center;margin-top:12px"><button class="btn" data-close>Yay!</button><button class="btn blue" data-open="hatchery">Hatchery</button></div></div>`,{color:RAR[DR(egg.did).r].col})},
+ rushegg(e){const egg=S.eggs.find(x=>x.uid===+e.dataset.uid),gc=Math.max(1,Math.ceil((egg.end-now())/120000));if(!spend('gems',gc))return;egg.end=now();commit();refresh()},
+ sellegg(e){const egg=S.eggs.find(x=>x.uid===+e.dataset.uid);const v=Math.round(RAR[DR(egg.did).r].sell/2);S.eggs=S.eggs.filter(x=>x!==egg);S.gold+=v;toast(`Egg sold for ${v} gold`,'gold');commit();refresh()},
+ hatchup(){const c=2000*(S.hatchCap-2);if(!spend('gold',c))return;S.hatchCap++;commit();refresh()},
+ bsel(e){const u=+e.dataset.uid,i=breedSel.indexOf(u);if(i>=0)breedSel.splice(i,1);else{if(breedSel.length>=2)breedSel.shift();breedSel.push(u)}refresh()},
+ breed(){const[a,b]=breedSel.map(u=>S.dragons.find(d=>d.uid===u));if(!a||!b)return;const kids=possibleChildren(a.did,b.did);
+   const tot=kids.reduce((s,k)=>s+RAR[k.r].w,0);let r=Math.random()*tot,res=kids[0];for(const k of kids){r-=RAR[k.r].w;if(r<=0){res=k;break}}
+   const dur=RAR[res.r].bt*60e3;S.breed={did:res.id,end:now()+dur,dur};S.stats.breeds++;addXP(10);breedSel=[];commit();refresh()},
+ rushbreed(){const gc=Math.max(1,Math.ceil((S.breed.end-now())/120000));if(!spend('gems',gc))return;S.breed.end=now();commit();refresh()},
+ takeegg(){if(S.eggs.length>=S.hatchCap)return toast('Your Hatchery is full. Hatch or sell an egg first.');const r=DR(S.breed.did).r;S.eggs.push({uid:S.uid++,did:S.breed.did,end:now()+RAR[r].ht*60e3});S.breed=null;toast('Egg sent to the Hatchery');commit();show(hatcheryPanel)},
+ buy(e){startPlace(e.dataset.item)},
+ buyegg(e){const i=+e.dataset.did;if(S.eggs.length>=S.hatchCap)return toast('Your Hatchery is full');if(!spend('gold',eggCost(i)))return;const first=!S.stats.hatches&&!S.eggs.length;S.eggs.push({uid:S.uid++,did:i,end:now()+(first?10e3:RAR.C.ht*60e3)});toast('Egg sent to the Hatchery');commit();closeModal()},
+ buyland(e){const i=+e.dataset.i,p=+e.dataset.p,I=ISLANDS[i];if(S.level<I.lv||S.land[i][p])return;if(!spend('gold',I.plots[p]))return;S.land[i][p]=1;addXP(50);toast('New land cleared!');closeModal();commit()},
+ buyisland(e){const i=+e.dataset.i,I=ISLANDS[i];if(S.level<I.lv)return;if(!spend('gold',wholePrice(i)))return;S.land[i]=[1,1,1,1];addXP(150);toast(`${I.name} is all yours!`);closeModal();commit()},
+ dsort(e){dragonsSort=e.dataset.s;refresh()},
+ btab(e){bookTab=e.dataset.t;refresh()},
+ binfo(e){show(bookInfo,+e.dataset.did)},
+ claim(e){const g=GOALS.find(x=>x.id===e.dataset.g);if(S.goals[g.id]||!g.p(S))return;S.goals[g.id]=1;for(const k in g.r)S[k]+=g.r[k];toast('Reward claimed!','gem');commit();refresh()},
+ pickteam(e){teamSel=[];show(teamPanel,+e.dataset.t)},
+ tsel(e){const u=+e.dataset.uid,i=teamSel.indexOf(u);if(i>=0)teamSel.splice(i,1);else if(teamSel.length<3)teamSel.push(u);refresh()},
+ startbattle(e){if(teamSel.length)startBattle(+e.dataset.t)},
+ atk(e){playerMove(+e.dataset.i)},
+ flee(){battle=null;show(arenaPanel)},
+ tutnext(){S.tut++;saveLocal();tutCheck();tutRender()},
+ skiptut(){S.tut=TUT.length;saveLocal();closeModal()},
+ savenow(){saveCloud(true);toast('Saving…')},
+ logout(){saveLocal();if(session.token)saveCloud(false,true);session.user=session.token=null;try{localStorage.removeItem('dh_session')}catch(e){}closeModal();S=null;$('#guide').classList.remove('on');showLogin()},
+ reset(){if(!resetArm){resetArm=true;return refresh()}resetArm=false;S=fresh();S.savedAt=now();saveLocal();if(session.token)saveCloud(true);closeModal();renderAll();homeCam();toast('A fresh island!')}
+};
+const OPEN={shop:t=>show(shopPanel,t),dragons:()=>show(dragonsPanel),book:()=>show(bookPanel),arena:()=>show(arenaPanel),goals:()=>show(goalsPanel),settings:()=>{resetArm=false;show(settingsPanel)},farms:()=>show(farmsOverview),hatchery:()=>show(hatcheryPanel),home:()=>{const z=cam.z;homeCam();},
+ collectAll:()=>{let g=0;S.tiles.filter(t=>t.type==='habitat').forEach(t=>g+=collect(t));let f=0;S.tiles.filter(t=>t.type==='farm'&&t.crop&&t.end<=now()).forEach(t=>{const c=CROPS.find(c=>c.id===t.crop);f+=c.food;S.food+=c.food;S.stats.harvests++;t.crop=null});if(g||f){toast(`Collected ${g?fmt(g)+' gold':''}${g&&f?' and ':''}${f?f+' food':''}`,'gold');commit()}else toast('Nothing to collect yet')}};
+function openTile(t){if(!t)return;
+  if(t.type==='habitat')show(habitatPanel,t.id);else if(t.type==='farm')show(farmPanel,t.id);else if(t.type==='hatchery')show(hatcheryPanel);else if(t.type==='tree'){breedSel=[];show(breedPanel)}
+  else if(t.type==='deco')openModal(DECOS.find(d=>d.id===t.kind).n,`<div class="row" style="justify-content:center"><button class="btn grey" data-act="move" data-tid="${t.id}">Move</button><button class="btn red" data-act="sellb" data-tid="${t.id}">Sell</button></div>`,{color:'#3fae4a'})}
+
+/* ================= events ================= */
+document.addEventListener('click',e=>{
+  if(e.target.closest('#world'))return;
+  if(e.target.closest('[data-close]')||e.target.id==='modalBg'){if(!battle)closeModal();return}
+  const o=e.target.closest('[data-open]');if(o){const[k,a]=o.dataset.open.split(':');if(OPEN[k])OPEN[k](a);return}
+  const oh=e.target.closest('[data-open-hab]');if(oh)return show(habitatPanel,+oh.dataset.openHab);
+  const of=e.target.closest('[data-open-farm]');if(of)return show(farmPanel,+of.dataset.openFarm);
+  const a=e.target.closest('[data-act]');if(a&&!a.disabled&&A[a.dataset.act]){A[a.dataset.act](a);return}
+});
+$('#bannerCancel').onclick=endMode;$('#bannerOk').onclick=confirmPlace;
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(mode)endMode();else if(!battle)closeModal()}if(e.key==='Enter'&&mode)confirmPlace()});
+$('#rotateOk').onclick=()=>$('#rotate').classList.remove('need');
+addEventListener('resize',()=>{if(S)resize()});
+
+/* ================= tick ================= */
+let lastSig='';
+function readySig(){return S.tiles.filter(t=>t.type==='farm').map(t=>t.crop&&t.end<=now()?1:0).join('')+'|'+S.eggs.map(e=>e.end<=now()?1:0).join('')+'|'+(S.breed&&S.breed.end<=now()?1:0)}
+setInterval(()=>{if(!S)return;renderBubbles();
+  document.querySelectorAll('[data-end]').forEach(el=>{el.textContent=fmtT(+el.dataset.end-now())});
+  document.querySelectorAll('[data-pend]').forEach(el=>{const a=+el.dataset.pstart,b=+el.dataset.pend;el.style.width=Math.min(100,(now()-a)/(b-a)*100)+'%'});
+  const sig=readySig();if(sig!==lastSig){const first=!lastSig;lastSig=sig;if(!first){renderWorld();if(view&&[farmPanel,hatcheryPanel,breedPanel,farmsOverview].includes(view.fn))refresh()}}
+},1000);
+setInterval(()=>{if(S&&!drag&&!mode)renderWorld()},15000);
+setInterval(()=>{if(S){saveLocal();if(dirty)saveCloud()}},20000);
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&S){saveLocal();if(session.token)saveCloud(false,true)}});
+
+/* ================= boot / login ================= */
+function daily(){const d=new Date().toDateString();if(S.lastDaily!==d){const first=!S.lastDaily;S.lastDaily=d;if(!first){S.gems+=3;S.gold+=200;setTimeout(()=>toast('Daily gift: +200 gold and +3 gems','gem'),600)}commit()}}
+function startGame(save){S=migrate(save);if(!save)S.savedAt=now();$('#login').style.display='none';
+  if(matchMedia('(orientation:portrait) and (max-width:700px)').matches)$('#rotate').classList.add('need');
+  lastSig='';resize();renderAll();homeCam();daily();saveLocal();if(session.token)saveCloud(true);
+  const away=save&&save.savedAt?now()-save.savedAt:0;if(away>60000){const g=S.tiles.filter(t=>t.type==='habitat').reduce((s,t)=>s+Math.floor(goldOf(t)),0);if(g>0)setTimeout(()=>toast(`Welcome back! Your dragons made ${fmt(g)} gold while you were away`,'gold'),900)}}
+async function showLogin(){const L=$('#login');L.style.display='flex';
+  const logo=`<svg viewBox="0 0 220 180" width="100%"><ellipse cx="110" cy="150" rx="96" ry="18" fill="#5bbb3e"/><path d="M20 150C40 175 180 175 200 150C180 190 40 190 20 150Z" fill="#8a5a36"/><g transform="translate(-6 40) scale(.95)">${inner(dragonSVG(30,2))}</g><g transform="translate(96 30) scale(1)">${inner(dragonSVG(57,2,{flip:true}))}</g></svg>`;
+  L.innerHTML=`<div class="lbox"><div class="logo">${logo}</div><div><h1>Dragon Haven</h1><p class="muted">Breed, hatch, raise and battle dragons across your own floating islands.</p>
+  <form id="lform"><label for="lu">Player name</label><input id="lu" autocomplete="username" maxlength="20"><label for="lp">Password</label><input id="lp" type="password" autocomplete="current-password" maxlength="100">
+  <div class="err" id="lerr"></div><div class="row"><button class="btn" type="submit" id="lin">Log in</button><button class="btn blue" type="button" id="lreg">Create account</button></div></form>
+  <button class="btn grey" id="lguest" style="margin-top:8px;width:100%">Play as guest (saves on this device)</button><p class="muted" id="lnet" style="margin-top:6px"></p></div></div>`;
+  const err=m=>$('#lerr').textContent=m;
+  let online=false;try{await api('/api/health');online=true}catch(e){}
+  session.online=online;
+  if(!online){$('#lnet').textContent='Online accounts are not available here, so guest mode is on.';$('#lin').disabled=$('#lreg').disabled=true}
+  const go=async reg=>{const u=$('#lu').value.trim(),p=$('#lp').value;if(!u||!p)return err('Enter a name and password');
+    try{const r=await api(reg?'/api/register':'/api/login',{method:'POST',body:{username:u,password:p}});session.user=r.username;session.token=r.token;try{localStorage.setItem('dh_session',JSON.stringify({u:r.username,t:r.token}))}catch(e){}
+      const local=loadLocal();const save=r.save&&local?(local.savedAt>r.save.savedAt?local:r.save):(r.save||local);setSave('Saved');startGame(save)}catch(e){err(e.message)}};
+  $('#lform').onsubmit=e=>{e.preventDefault();go(false)};$('#lreg').onclick=()=>go(true);
+  $('#lguest').onclick=()=>{session.user=null;session.token=null;try{localStorage.setItem('dh_session',JSON.stringify({guest:1}))}catch(e){}setSave('Saved on this device');startGame(loadLocal())}}
+async function boot(){let ses=null;try{ses=JSON.parse(localStorage.getItem('dh_session')||'null')}catch(e){}
+  if(ses&&ses.t){session.user=ses.u;session.token=ses.t;try{const r=await api('/api/save');const local=loadLocal();const save=r.save&&local?(local.savedAt>r.save.savedAt?local:r.save):(r.save||local);setSave('Saved');return startGame(save)}catch(e){session.user=session.token=null}}
+  if(ses&&ses.guest){setSave('Saved on this device');return startGame(loadLocal())}
+  showLogin()}
+boot();
+}
+</script>
+</body>
+</html>
